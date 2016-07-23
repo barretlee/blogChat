@@ -1,0 +1,372 @@
+<script src="http://cdn.staticfile.org/socket.io/1.3.7/socket.io.js"></script>
+<script src="http://cdn.staticfile.org/jquery/2.2.1/jquery.min.js"></script>
+
+<style>
+  * {
+    margin: 0;
+    padding: 0;
+  }
+  body {
+    font-size: 12px;
+  }
+  .chatroom {
+    position: fixed;
+    right: -3px;
+    bottom: -3px;
+    width: 563px;
+    height: 405px;
+    z-index: 998;
+    overflow: hidden;
+    background: #FFF;
+    box-shadow: -3px -2px 8px -1px rgba(0,0,0,0.2);
+    border-radius: 2px 0px 0px 2px;
+  }
+  .chatroom-info {
+    display: none;
+  }
+  .chatroom-tribe {
+    padding: 4px 5px;
+    cursor: pointer;
+    height: 30px;
+    line-height: 30px;
+    overflow: hidden;
+    margin-bottom: 1px;
+    position: relative;
+  }
+  .chatroom-tribe:hover, .chatroom-tribe.current {
+    background: #f2f2f5;
+  }
+  .chatroom-tribe img {
+    width: 30px;
+    height: 30px;
+    vertical-align: middle;
+  }
+  .chatroom-tribe .name {
+    max-width: 114px;
+    display: inline-block;
+    vertical-align: middle;
+    height: 30px;
+    margin-left: 10px;
+    line-height: 30px;
+    overflow: hidden;
+  }
+  .chatroom-tribe .count {
+    min-width: 18px;
+    height: 13px;
+    line-height: 14px;
+    text-align: center;
+    display: inline-block;
+    vertical-align: middle;
+    padding: 1px 2px;
+    background: #fa7d3c;
+    color: #fff;
+    border-radius: 3px;
+    transform: scale(0.8);
+  }
+  .chatroom-tribe .iconfont {
+    position: absolute;
+    right: 0;
+    width: 30px;
+    height: 30px;
+    text-align: center;
+    font-size: 12px;
+    font-family: Arial;
+    color: #696e78;
+    font-style: normal;
+    transform: scale(0.5);
+    font-weight: bold;
+    visibility: hidden;
+  }
+  .chatroom-tribe .iconfont:hover {
+    color: #fa7d3c;
+  }
+  .chatroom-tribe:hover .iconfont {
+    visibility: visible;
+  }
+  .chatroom-tribes {
+    float: left;
+    width: 159px;
+    border-right: 1px #d9d9d9 solid;
+    overflow: hidden;
+    height: 402px;
+  }
+  .chatroom-tribe {
+
+  }
+  .chatroom-pannels {
+    float: left;
+    width: 400px;
+    height: 350px;
+  }
+  .chatroom-pannel-bd {
+    height: 340px;
+    background: #f2f2f5;
+    overflow-y: auto;
+  }
+  .chatroom-pannel-ft {
+    border-top: 1px #d9d9d9 solid;
+    position: relative;
+    height: 60px;
+  }
+  .chatroom-pannel-ft textarea {
+    resize: none;
+    border: none;
+    position: absolute;
+    left: 6px;
+    right: 6px;
+    top: 6px;
+    width: 100%;
+    bottom: 6px;
+    outline: none;
+    line-height: 18px;
+    font-size: 12px;
+  }
+  .chatroom-log {
+    padding: 15px 10px 0;
+    overflow: hidden;
+    line-height: 18px;
+  }
+  .chatroom-log .avatar {
+    width: 30px;
+    height: 30px;
+    overflow: hidden;
+    float: left;
+    border-radius: 4px;
+    cursor: pointer;
+  }
+  .chatroom-log .avatar img {
+    width: 30px;
+    min-height: 30px;
+  }
+  .chatroom-log .time {
+    margin-left: 13px;
+    margin-bottom: 4px;
+    float: left;
+    color: #999;
+  }
+  .chatroom-log .detail {
+    max-width: 222px;
+    float: left;
+    padding: 5px 9px;
+    position: relative;
+    margin-left: 13px;
+    background: #fff;
+    border: 1px #ccc solid;
+    border-radius: 5px;
+    box-shadow: 0 3px 3px rgba(0,0,0,.05);
+    word-break: break-word;
+  }
+  .chatroom-log .detail:before, .chatroom-log .detail:after {
+    content: " ";
+    display: inline-block;
+    width: 0;
+    height: 0;
+    border-width: 7px;
+    border-style: solid;
+    overflow: hidden;
+    font-size: 0;
+    line-height: 0;
+    vertical-align: top;
+    top: 10px;
+    position: absolute;
+    border-top-color: rgba(0, 0, 0, 0);
+    border-bottom-color: rgba(0, 0, 0, 0);
+    border-left-color: rgba(0, 0, 0, 0);
+  }
+  .chatroom-log .detail:before {
+    border-width: 4px;
+    border-top-color: #ccc;
+    color: #ccc;
+    left: -8px;
+  }
+  .chatroom-log .detail:after {
+    border-top-color: #fff;
+    color: #fff;
+    left: -6px;
+    border-width: 3px;
+    top: 11px;
+  }
+  .chatroom-log.myself {
+  }
+  .chatroom-log.myself .avatar {
+    float: right;
+  }
+  .chatroom-log.myself .time {
+    float: right;
+    margin-left: 0;
+    margin-right: 13px;
+  }
+  .chatroom-log.myself .detail {
+    float: right;
+    margin-left: 0;
+    margin-right: 13px;
+    background: #d7ebfe;
+    border: 1px #b7d4ef solid;
+  }
+  .myself .detail:before, .myself .detail:after {
+    border-top-color: rgba(0, 0, 0, 0);
+    border-bottom-color: rgba(0, 0, 0, 0);
+    border-right-color: rgba(0, 0, 0, 0);
+  }
+  .chatroom-log.myself .detail:before {
+    border-top-color: #b7d4ef;
+    border-left-color: #b7d4ef;
+    left: auto;
+    right: -8px;
+  }
+  .chatroom-log.myself .detail:after {
+    border-top-color: #d7ebfe;
+    border-left-color: #d7ebfe;
+    left: auto;
+    right: -6px;
+  }
+</style>
+
+<div class="chatroom">
+  <div class="chatroom-info"></div>
+  <ul class="chatroom-tribes">
+    <li class="chatroom-tribe current" data-id="group">
+      <span class="name">群聊，当前 <strong>40</strong> 人</span>
+      <span class="count">2</span>
+      <i class="iconfont">╳</i>
+    </li>
+    <li class="chatroom-tribe" data-id="group">
+      <img src="http://avatar.duoshuo.com/avatar-50/292/117200.jpg" alt="小胡子哥">
+      <span class="name">小胡子哥</span>
+      <span class="count">2</span>
+      <i class="iconfont">╳</i>
+    </li>
+  </ul>
+  <div class="chatroom-pannels">
+    <div class="chatroom-pannel-bd">
+      <div class="chatroom-item current" data-id="group">
+        <div class="chatroom-time"></div>
+        <div class="chatroom-log">
+          <span class="avatar"><img src="http://avatar.duoshuo.com/avatar-50/292/117200.jpg" alt="小胡子哥"></span>
+          <span class="time">小胡子哥 2016-07-22 22:21:23</span>
+          <span class="detail">
+            这是一条私密消息，需要使用新版微博客户端查看，点击下载微博最新版客户端 http://c.weibo.cn/client/guide/download
+          </span>
+        </div>
+        <div class="chatroom-log myself">
+          <span class="avatar"><img src="http://avatar.duoshuo.com/avatar-50/292/117200.jpg" alt="小胡子哥"></span>
+          <span class="time">小胡子哥 2016-07-22 22:21:23</span>
+          <span class="detail">
+            这是一条私密消息，需要使用新版微博客户端查看，点击下载微博最新版客户端 http://c.weibo.cn/client/guide/download
+          </span>
+        </div>
+      </div>
+    </div>
+    <div class="chatroom-pannel-ft"><textarea type="text" placeholder="按 Ctrl+Enter 发送"></textarea></div>
+  </div>
+</div>
+
+<script>
+var ChatRoomClient = function() {
+  this.socket = io();
+  this.init();
+};
+
+ChatRoomClient.prototype.init = function() {
+  this.connection();
+  this.socketEvent();
+  this.bindEvent();
+};
+
+ChatRoomClient.prototype.connection = function(cb) {
+  var self = this;
+  self.socket.on('connected', function(data) {
+    self.userId = data.id;
+    self.userName = self.userId.slice(2);
+    self.userAvatar = 'http://avatar.duoshuo.com/avatar-50/292/117200.jpg';
+    if(window.DUOSHUO && window.DUOSHUO.visitor
+       && window.DUOSHUO.visitor.user_id) {
+      var userInfo = window.DUOSHUO.visitor;
+      self.userId = userInfo.user_id;
+      self.userName = userInfo.name;
+      self.userAvatar = userInfo.avatar_url;
+    } else {
+      if(window.sessionStorage) {
+        var userId = window.sessionStorage.getItem('userId');
+        if(userId) {
+          self.userId = userId;
+          self.userName = userId.slice(2);
+        } else {
+          window.sessionStorage.setItem('userId', self.userId);
+        }
+      }
+    }
+    console.info('ID: ' + self.userId);
+    self.socket.emit('createUser', {
+      userId: self.userId,
+      userName: self.userName,
+      userAvatar: self.userAvatar
+    });
+  });
+};
+
+ChatRoomClient.prototype.socketEvent = function() {
+  var self = this;
+  // self.socket.on('new', function(data) {
+  //   self.reciveMsg(data.id, 'ID');
+  //   self.userId = data.id;
+  // });
+  self.socket.on('broadcast', function(data) {
+    self.reciveMsg(data, 'BROADCAST');
+  });
+  self.socket.on('pm', function(data) {
+    self.reciveMsg(data, 'PM');
+  });
+  self.socket.on('pong', function(data) {
+    self.reciveMsg(data, 'PONG');
+  });
+};
+
+ChatRoomClient.prototype.bindEvent = function() {
+  var self = this;
+  $('form').submit(function(){
+    self.socket.emit('chat message', $('#m').val());
+    $('#m').val('');
+    return false;
+  });
+  $(window).on('beforeunload', function() {
+    self.socket.emit('disconnet', {
+      id: self.userId
+    });
+  });
+};
+
+ChatRoomClient.prototype.sendMsg = function(data, to) {
+  var type = 'gm';
+  if(to) {
+    type = 'pm';
+  }
+  data.to = to;
+  data.from = this.userId;
+  this.socket.emit(type, data);
+};
+
+
+ChatRoomClient.prototype.reciveMsg = function(msg, type) {
+  if(type === 'PONG') return;
+  type = type ? type + ': ' : '';
+  console.info(type, msg);
+};
+
+
+ChatRoomClient.prototype.createPrivateChat = function() {
+
+};
+
+
+ChatRoomClient.prototype.removePrivateChat = function() {
+
+};
+
+
+ChatRoomClient.prototype.tabChatBox = function() {
+
+};
+
+window.chatRoomClient = new ChatRoomClient();
+</script>

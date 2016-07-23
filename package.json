@@ -1,0 +1,25 @@
+{
+  "name": "blog-chat",
+  "version": "1.0.0",
+  "description": "Chat room source code for Barret Lee's Personal Blog.",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/barretlee/blogChat.git"
+  },
+  "keywords": [
+    "chatroom"
+  ],
+  "author": "Barret Lee <barret.china@gmail.com>",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/barretlee/blogChat/issues"
+  },
+  "homepage": "https://github.com/barretlee/blogChat#readme",
+  "dependencies": {
+    "socket.io": "^1.4.8"
+  }
+}
