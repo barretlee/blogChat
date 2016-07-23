@@ -497,6 +497,9 @@ ChatRoomClient.prototype.createPrivateChat = function(data, setCurrent) {
 
 
 ChatRoomClient.prototype.addChatLog = function(data, isSelf) {
+  if(isSelf) {
+    data.name = '我';
+  }
   var logXtpl = [
     '<div class="chatroom-log' + (isSelf ? ' myself' : '') + '">',
       '<span class="avatar"><img src="<% avatar %>" alt="<% name %>"></span>',
