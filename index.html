@@ -291,7 +291,7 @@
 <script>
 var ChatRoomClient = function() {
   this.totalCount = 0;
-  this.socket = io();
+  this.socket = io.connect('http://123.56.230.53:29231/');
   this.init();
 };
 
