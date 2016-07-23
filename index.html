@@ -21,10 +21,34 @@
     box-shadow: -3px -2px 8px -1px rgba(0,0,0,0.2);
     border-radius: 2px 0px 0px 2px;
   }
+  .chatroom-fold {
+    height: 40px;
+    width: 160px;
+    right: 0;
+    bottom: 0;
+  }
+  .chatroom-fold .chatroom-tribe .count {
+    right: 42px;
+  }
   .chatroom-info {
-    display: none;
+    position: absolute;
+    right: 10px;
+    top: 4px;
+    cursor: pointer;
+  }
+  .chatroom-info:after {
+    content: '[收起]';
+    color: #F40;
+  }
+  .chatroom-fold .chatroom-info:after {
+    content: '[展开]';
+    color: #F40;
+    z-index: 10;
+    position: relative;
+    top: 6px;
   }
   .chatroom-tribe {
+    -webkit-user-select: none;
     padding: 4px 5px;
     cursor: pointer;
     height: 30px;
@@ -42,7 +66,7 @@
     vertical-align: middle;
   }
   .chatroom-tribe .name {
-    max-width: 114px;
+    max-width: 90px;
     display: inline-block;
     vertical-align: middle;
     height: 30px;
@@ -51,6 +75,7 @@
     overflow: hidden;
   }
   .chatroom-tribe .count {
+    visibility: hidden;
     min-width: 18px;
     height: 13px;
     line-height: 14px;
@@ -62,6 +87,9 @@
     color: #fff;
     border-radius: 3px;
     transform: scale(0.8);
+    position: absolute;
+    right: 22px;
+    top: 12px;
   }
   .chatroom-tribe .iconfont {
     position: absolute;
@@ -89,6 +117,7 @@
     border-right: 1px #d9d9d9 solid;
     overflow: hidden;
     height: 402px;
+    overflow-y: auto;
   }
   .chatroom-tribe {
 
@@ -102,6 +131,15 @@
     height: 340px;
     background: #f2f2f5;
     overflow-y: auto;
+  }
+  .chatroom-item {
+    display: none;
+    height: 330px;
+    overflow-y: auto;
+    padding-bottom: 10px;
+  }
+  .chatroom-item.current {
+    display: block;
   }
   .chatroom-pannel-ft {
     border-top: 1px #d9d9d9 solid;
@@ -122,7 +160,7 @@
     font-size: 12px;
   }
   .chatroom-log {
-    padding: 15px 10px 0;
+    padding: 15px 10px 10px;
     overflow: hidden;
     line-height: 18px;
   }
@@ -139,10 +177,15 @@
     min-height: 30px;
   }
   .chatroom-log .time {
+    width: 310px;
     margin-left: 13px;
     margin-bottom: 4px;
     float: left;
     color: #999;
+  }
+  .chatroom-log .time b:hover {
+    cursor: pointer;
+    color: #666;
   }
   .chatroom-log .detail {
     max-width: 222px;
@@ -195,6 +238,7 @@
     float: right;
     margin-left: 0;
     margin-right: 13px;
+    text-align: right;
   }
   .chatroom-log.myself .detail {
     float: right;
@@ -220,49 +264,33 @@
     left: auto;
     right: -6px;
   }
+  .chatroom-log-info {
+    text-align: center;
+    padding: 5px;
+    color: #999;
+  }
 </style>
 
-<div class="chatroom">
+<div class="chatroom chatroom-fold">
   <div class="chatroom-info"></div>
   <ul class="chatroom-tribes">
     <li class="chatroom-tribe current" data-id="group">
-      <span class="name">群聊，当前 <strong>40</strong> 人</span>
-      <span class="count">2</span>
-      <i class="iconfont">╳</i>
-    </li>
-    <li class="chatroom-tribe" data-id="group">
-      <img src="http://avatar.duoshuo.com/avatar-50/292/117200.jpg" alt="小胡子哥">
-      <span class="name">小胡子哥</span>
-      <span class="count">2</span>
-      <i class="iconfont">╳</i>
+      <span class="name">当前 <strong>1</strong> 人在线</span>
+      <span class="count">0</span>
     </li>
   </ul>
   <div class="chatroom-pannels">
     <div class="chatroom-pannel-bd">
       <div class="chatroom-item current" data-id="group">
-        <div class="chatroom-time"></div>
-        <div class="chatroom-log">
-          <span class="avatar"><img src="http://avatar.duoshuo.com/avatar-50/292/117200.jpg" alt="小胡子哥"></span>
-          <span class="time">小胡子哥 2016-07-22 22:21:23</span>
-          <span class="detail">
-            这是一条私密消息，需要使用新版微博客户端查看，点击下载微博最新版客户端 http://c.weibo.cn/client/guide/download
-          </span>
-        </div>
-        <div class="chatroom-log myself">
-          <span class="avatar"><img src="http://avatar.duoshuo.com/avatar-50/292/117200.jpg" alt="小胡子哥"></span>
-          <span class="time">小胡子哥 2016-07-22 22:21:23</span>
-          <span class="detail">
-            这是一条私密消息，需要使用新版微博客户端查看，点击下载微博最新版客户端 http://c.weibo.cn/client/guide/download
-          </span>
-        </div>
       </div>
     </div>
-    <div class="chatroom-pannel-ft"><textarea type="text" placeholder="按 Ctrl+Enter 发送"></textarea></div>
+    <div class="chatroom-pannel-ft"><textarea type="text" class="chatroom-input" placeholder="按 Ctrl+Enter 发送"></textarea></div>
   </div>
 </div>
 
 <script>
 var ChatRoomClient = function() {
+  this.totalCount = 0;
   this.socket = io();
   this.init();
 };
@@ -271,6 +299,12 @@ ChatRoomClient.prototype.init = function() {
   this.connection();
   this.socketEvent();
   this.bindEvent();
+  this.addInfoLog({
+    msg: '注意：聊天日志不会保存，请注意备份.'
+  });
+  this.addInfoLog({
+    msg: '提示：点击头像可进入私聊'
+  });
 };
 
 ChatRoomClient.prototype.connection = function(cb) {
@@ -307,15 +341,23 @@ ChatRoomClient.prototype.connection = function(cb) {
 
 ChatRoomClient.prototype.socketEvent = function() {
   var self = this;
-  // self.socket.on('new', function(data) {
-  //   self.reciveMsg(data.id, 'ID');
-  //   self.userId = data.id;
-  // });
   self.socket.on('broadcast', function(data) {
+    if(data.id == self.userId) return;
     self.reciveMsg(data, 'BROADCAST');
+    if(data.type == 'NEW') {
+      return self.addInfoLog(data);
+    }
+    // if(data.type == 'LEAVE') {
+    //   return self.addInfoLog(data);
+    // }
+    self.addChatLog(data);
+    self.updateCount('group');
   });
   self.socket.on('pm', function(data) {
     self.reciveMsg(data, 'PM');
+    self.createPrivateChat(data);
+    self.addChatLog(data);
+    self.updateCount(data.id);
   });
   self.socket.on('pong', function(data) {
     self.reciveMsg(data, 'PONG');
@@ -324,11 +366,84 @@ ChatRoomClient.prototype.socketEvent = function() {
 
 ChatRoomClient.prototype.bindEvent = function() {
   var self = this;
-  $('form').submit(function(){
-    self.socket.emit('chat message', $('#m').val());
-    $('#m').val('');
-    return false;
+  $('.chatroom').on('keydown', function(evt) {
+    if(evt.keyCode == 27) {
+      $(this).addClass('chatroom-fold');
+    }
   });
+  $('.chatroom-input').on('keydown', function(evt) {
+    var $this = $(this);
+    if((evt.ctrlKey || evt.metaKey) && evt.keyCode == '13' && $.trim($this.val())) {
+      var type = $('.chatroom-tribe.current').attr('data-id');
+      var data = {
+        id: self.userId,
+        msg: $this.val(),
+        name: self.userName,
+        avatar: self.userAvatar,
+        toId: type
+      };
+      self.socket.emit(type == 'group' ? 'gm' : 'pm', data);
+      self.addChatLog(data, true);
+      $this.val('');
+      return false;
+    }
+  });
+  $('.chatroom-tribes').on('click', 'li', function(evt) {
+    evt.preventDefault();
+    var id = $(this).attr('data-id');
+    $('.chatroom-tribes').find('li').removeClass('current');
+    $('.chatroom-item').removeClass('current');
+    $(this).addClass('current');
+    $('.chatroom-item[data-id="' + id + '"]').addClass('current');
+    $(this).find('.count').text(0).css('visibility', 'hidden');
+    this.totalCount -= parseInt($(this).find('.count').text());
+    $('.chatroom textarea').focus();
+  });
+  $('.chatroom-tribes').on('click', 'i', function(evt) {
+    evt.preventDefault();
+    evt.stopImmediatePropagation();
+    var $p = $(this).parent('li');
+    var id = $p.attr('data-id');
+    $p.remove();
+    $(".chatroom-item[data-id='" + id + "']").remove();
+    $('.chatroom-item').removeClass('current');
+    $('.chatroom-item[data-id="group"]').addClass('current');
+    $('.chatroom-tribe[data-id="group"]').addClass('current');
+    this.totalCount -= parseInt($(this).find('.count').text());
+  });
+  $(".chatroom-item").on('click', '.avatar, .time', function(evt) {
+    evt.preventDefault();
+    evt.stopImmediatePropagation();
+    var $this = $(this);
+    var $p = $this.parent('.chatroom-log');
+    var avatar = $p.find('.avatar img').attr('src');
+    var name = $p.find('.time b').text();
+    var id = $p.find('.time b').attr('data-id');
+    if(id === self.userId) return;
+    self.createPrivateChat({
+      avatar: avatar,
+      name: name,
+      id: id
+    }, true);
+  });
+  $(".chatroom-info").on('click', function(evt) {
+    evt.preventDefault();
+    // $('.chatroom').toggleClass('chatroom-fold');
+    if(!$('.chatroom').hasClass('chatroom-fold')) {
+      $('.chatroom').addClass('chatroom-fold');
+      $('.chatroom textarea').focus();
+      $('.chatroom-tribe').removeClass('current');
+      $('.chatroom-item').removeClass('current');
+      $('.chatroom-tribes>li').first().addClass('current');
+      $('.chatroom-item').first().addClass('current');
+      $('.chatroom .count').eq(0).text(0).css('visibility', 'hidden');
+    } else {
+      $('.chatroom').removeClass('chatroom-fold');
+    }
+  });
+  if(/Mac OS/i.test(navigator.appVersion)) {
+    $(".chatroom textarea").attr('placeholder', '按 Command+Enter 发送');
+  }
   $(window).on('beforeunload', function() {
     self.socket.emit('disconnet', {
       id: self.userId
@@ -336,36 +451,100 @@ ChatRoomClient.prototype.bindEvent = function() {
   });
 };
 
-ChatRoomClient.prototype.sendMsg = function(data, to) {
-  var type = 'gm';
-  if(to) {
-    type = 'pm';
+
+ChatRoomClient.prototype.reciveMsg = function(data, type) {
+  if(type === 'PONG') {
+    $('.chatroom-tribe .name strong').text(data.count);
+    if($('.chatroom').hasClass('chatroom-fold') && this.totalCount) {
+      $('.chatroom .count').eq(0).text(this.totalCount).css('visibility', 'visible');
+    }
+    return;
   }
-  data.to = to;
-  data.from = this.userId;
-  this.socket.emit(type, data);
-};
-
-
-ChatRoomClient.prototype.reciveMsg = function(msg, type) {
-  if(type === 'PONG') return;
   type = type ? type + ': ' : '';
-  console.info(type, msg);
+  console.info(type, data);
 };
 
 
-ChatRoomClient.prototype.createPrivateChat = function() {
-
+ChatRoomClient.prototype.createPrivateChat = function(data, setCurrent) {
+  if($('.chatroom-item[data-id="' + data.id + '"]').size()) return;
+  var tabXtpl = [
+    '<li class="chatroom-tribe" data-id="<% id %>">',
+      '<img src="<% avatar %>" alt="<% name %>">',
+      '<span class="name"><% name %></span>',
+      '<span class="count">0</span>',
+      '<i class="iconfont">╳</i>',
+    '</li>'
+  ];
+  var $li = tabXtpl.join('').replace(/<%\s*?(\w+)\s*?%>/gm, function($0, $1) {
+    return data && data[$1] || '';
+  });
+  $(".chatroom-tribes").append($li);
+  var id = data && data.id;
+  var $pannel = '<div class="chatroom-item" data-id="' + id + '"></div>';
+  $(".chatroom-pannel-bd").append($pannel);
+  if(setCurrent) {
+    $('.chatroom-tribe').removeClass('current');
+    $('.chatroom-item').removeClass('current');
+    $('.chatroom-tribes>li').last().addClass('current');
+    $('.chatroom-item').last().addClass('current');
+  }
+  if(data.toId) {
+    this.addInfoLog({
+      msg: '与 ' + data.name + ' 私聊'
+    }, data.toId);
+  }
 };
 
 
-ChatRoomClient.prototype.removePrivateChat = function() {
-
+ChatRoomClient.prototype.addChatLog = function(data, isSelf) {
+  var logXtpl = [
+    '<div class="chatroom-log' + (isSelf ? ' myself' : '') + '">',
+      '<span class="avatar"><img src="<% avatar %>" alt="<% name %>"></span>',
+      '<span class="time"><b data-id="<% id %>"><% name %></b> ' + new Date().toLocaleString() + '</span>',
+      '<span class="detail"><% msg %></span>',
+    '</div>'
+  ];
+  var $log = logXtpl.join('\n').replace(/<%\s*?(\w+)\s*?%>/gm, function($0, $1) {
+    if($1 === 'avatar' && (!data || !data[$1])) {
+      return 'http://avatar.duoshuo.com/avatar-50/292/117200.jpg';
+    }
+    return data && data[$1] || '';
+  });
+  var $target = $(".chatroom-item[data-id='group']");
+  var $itemId = $(".chatroom-item[data-id='" + data.id + "']");
+  var $itemToId = $(".chatroom-item[data-id='" + data.toId + "']");
+  if($itemId.size()) {
+    $target = $itemId;
+  }
+  if($itemToId.size()) {
+    $target = $itemToId;
+  }
+  $target.append($log).scrollTop($target.height());
 };
 
+ChatRoomClient.prototype.addInfoLog = function(data, id) {
+  var $info = '<div class="chatroom-log-info">' + data.msg + '</div>';
+  var id = id || 'group';
+  var $target = $(".chatroom-item[data-id='" + id + "']");
+  $target.append($info).scrollTop($target.height());
+};
 
-ChatRoomClient.prototype.tabChatBox = function() {
-
+ChatRoomClient.prototype.updateCount = function(id) {
+  var $li = $('.chatroom-tribe[data-id="' + id + '"]');
+  if(!$li.size() || $li.hasClass('current')) return;
+  var $target = $li.find('.count');
+  var count = parseInt($target.text());
+  if(++count > 99) {
+    count = 99;
+  }
+  $target.text(count).css('visibility', 'visible');
+  this.totalCount++;
+  if(this.totalCount > 99) {
+    this.totalCount = 99;
+  }
+  if($('.chatroom').hasClass('chatroom-fold')) {
+    $('.chatroom .count').eq(0).text(this.totalCount).css('visibility', 'visible');
+  }
 };
 
 window.chatRoomClient = new ChatRoomClient();

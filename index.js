@@ -52,10 +52,8 @@ ChatRoom.prototype.bindEvent = function() {
       if(!self.onlineUser[userId]) {
         // 广播新用户
         io.emit('broadcast', {
-          msg: '欢迎加入群聊！',
-          id: userId,
-          name: userName,
-          avatar: userAvatar
+          msg: '欢迎 ' + userName + ' 加入群聊！',
+          type: "NEW"
         });
       }
       self.onlineUser[userId] = Object.assign(socket, data);
@@ -66,7 +64,7 @@ ChatRoom.prototype.bindEvent = function() {
       var userId = data.userId;
       if(self.onlineUser[userId]) {
         io.emit('broadcast', {
-          id: userId,
+          msg: '用户 ' + userId + ' 离开群聊',
           type: "LEAVE"
         });
         delete self.onlineUser[userId];
@@ -75,21 +73,38 @@ ChatRoom.prototype.bindEvent = function() {
 
     // 群聊，广播信息
     socket.on('gm', function(data) {
-      io.emit('broadcast', { msg: data.msg });
+      io.emit('broadcast', {
+        msg: data.msg,
+        id: data.id,
+        name: data.name,
+        avatar: data.avatar
+      });
     });
 
     // 私聊
     socket.on('pm', function(data) {
-      var toUserId = data.to;
+      var toUserId = data.toId;
       var toSocket = self.onlineUser[toUserId];
       if(toSocket) {
-        toSocket.emit('pm', { msg: data.msg, from: data.from });
+        toSocket.emit('pm', {
+          msg: data.msg,
+          id: data.id,
+          name: data.name,
+          avatar: data.avatar
+        });
       } else {
-        socket.emit('pm', { msg: '对方已下线。' });
+        socket.emit('pm', {
+          msg: '对方已下线' ,
+          type: "OFFLINE"
+        });
       }
     });
   });
+  this.welcome();
+};
 
+ChatRoom.prototype.welcome = function() {
+  var self = this;
   // 心跳机制
   setInterval(function() {
     var users = [];
@@ -100,15 +115,11 @@ ChatRoom.prototype.bindEvent = function() {
         avatar: self.onlineUser[id].userAvatar
       });
     }
-    io.emit('pong', {
+    self.io.emit('pong', {
       users: users,
       count: users.length
     });
   }, PONG_DELTA);
 };
-
-// ChatRoom.prototype.welcome = function() {
-
-// };
 
 new ChatRoom();
