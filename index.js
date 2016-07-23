@@ -40,7 +40,7 @@ ChatRoom.prototype.bindEvent = function() {
 
   // 新用户
   io.on('connection', function (socket) {
-    var id = socket.userId = socket.id;
+    var id = socket.id;
     // 用户与服务器第一次握手，服务器传递信息给客户端
     socket.emit('connected', { id: id });
     // 用户与服务器第二次握手，客户端传递信息给服务器
@@ -81,6 +81,11 @@ ChatRoom.prototype.bindEvent = function() {
       });
     });
 
+    // 客户端请求心跳检测
+    socket.on('ping', function(data) {
+      self.pong(data.id);
+    });
+
     // 私聊
     socket.on('pm', function(data) {
       var toUserId = data.toId;
@@ -100,26 +105,33 @@ ChatRoom.prototype.bindEvent = function() {
       }
     });
   });
-  this.welcome();
-};
-
-ChatRoom.prototype.welcome = function() {
-  var self = this;
   // 心跳机制
   setInterval(function() {
-    var users = [];
-    for(var id in self.onlineUser) {
-      users.push({
-        id: id,
-        name: self.onlineUser[id].userName,
-        avatar: self.onlineUser[id].userAvatar
-      });
-    }
-    self.io.emit('pong', {
-      users: users,
-      count: users.length
-    });
+    self.pong();
   }, PONG_DELTA);
+};
+
+ChatRoom.prototype.pong = function(id) {
+  var self = this;
+  var users = [];
+  for(var id in self.onlineUser) {
+    users.push({
+      id: id,
+      name: self.onlineUser[id].userName,
+      avatar: self.onlineUser[id].userAvatar
+    });
+  }
+  if(id) {
+    return self.onlineUser[id].emit('pong', {
+      users: users,
+      count: users.length,
+      type: 'PONG2'
+    });
+  }
+  self.io.emit('pong', {
+    users: users,
+    count: users.length
+  });
 };
 
 new ChatRoom();
