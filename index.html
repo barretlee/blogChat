@@ -309,8 +309,8 @@
 var ChatRoomClient = function() {
   this.users = [];
   this.totalCount = 0;
-  this.socket = io.connect('http://123.56.230.53:29231/');
-  // this.socket = io.connect('http://127.0.0.1:29231');
+  // this.socket = io.connect('http://123.56.230.53:29231/');
+  this.socket = io.connect('http://127.0.0.1:29231');
   this.startup();
   this.init();
 };
@@ -574,7 +574,7 @@ ChatRoomClient.prototype.addChatLog = function(data, isSelf) {
     return data && data[$1] || '';
   });
   var $target = $(".chatroom-item[data-id='group']");
-  var $itemId = $(".chatroom-item[data-id='" + data.id + "']");
+  var $itemId = $(".chatroom-item[data-id='" + (data.userId || data.id) + "']");
   var $itemToId = $(".chatroom-item[data-id='" + data.toId + "']");
   if($itemId.size()) {
     $target = $itemId;

@@ -76,7 +76,7 @@ ChatRoom.prototype.bindEvent = function() {
     socket.on('gm', function(data) {
       io.emit('broadcast', {
         msg: data.msg,
-        id: data.id,
+        userId: data.id,
         name: data.name,
         avatar: data.avatar
       });
