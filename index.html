@@ -293,7 +293,9 @@
 <script>
 var ChatRoomClient = function() {
   this.totalCount = 0;
-  this.socket = io.connect('http://123.56.230.53:29231/');
+  // this.socket = io.connect('http://123.56.230.53:29231/');
+  this.socket = io.connect('http://localhost:29231');
+  this.startup();
   this.init();
 };
 
@@ -309,6 +311,28 @@ ChatRoomClient.prototype.init = function() {
   });
 };
 
+ChatRoomClient.prototype.startup = function() {
+  var xtpl = [
+    '<div class="chatroom chatroom-fold">',
+      '<div class="chatroom-info"></div>',
+      '<ul class="chatroom-tribes">',
+        '<li class="chatroom-tribe current" data-id="group">',
+          '<span class="name">当前 <strong>1</strong> 人在线</span>',
+          '<span class="count">0</span>',
+        '</li>',
+      '</ul>',
+      '<div class="chatroom-pannels">',
+        '<div class="chatroom-pannel-bd">',
+          '<div class="chatroom-item current" data-id="group">',
+          '</div>',
+        '</div>',
+        '<div class="chatroom-pannel-ft"><textarea type="text" class="chatroom-input" placeholder="按 Ctrl+Enter 发送"></textarea></div>',
+      '</div>',
+    '</div>'
+  ].join('\n');
+  $('body').after(xtpl);
+}
+
 ChatRoomClient.prototype.connection = function(cb) {
   var self = this;
   self.socket.on('connected', function(data) {
@@ -316,8 +340,8 @@ ChatRoomClient.prototype.connection = function(cb) {
     self.userName = self.userId.slice(2);
     self.userAvatar = 'http://avatar.duoshuo.com/avatar-50/292/117200.jpg';
     if(window.DUOSHUO && window.DUOSHUO.visitor
-       && window.DUOSHUO.visitor.user_id) {
-      var userInfo = window.DUOSHUO.visitor;
+       && window.DUOSHUO.visitor.data.user_id) {
+      var userInfo = window.DUOSHUO.visitor.data;
       self.userId = userInfo.user_id;
       self.userName = userInfo.name;
       self.userAvatar = userInfo.avatar_url;
@@ -332,7 +356,10 @@ ChatRoomClient.prototype.connection = function(cb) {
         }
       }
     }
-    console.info('ID: ' + self.userId);
+    if(window.sessionStorage) {
+      window.sessionStorage.setItem('userId', self.userId);
+    }
+    // console.info('ID: ' + self.userId);
     self.socket.emit('createUser', {
       userId: self.userId,
       userName: self.userName,
@@ -362,7 +389,7 @@ ChatRoomClient.prototype.socketEvent = function() {
     self.updateCount(data.id);
   });
   self.socket.on('pong', function(data) {
-    self.reciveMsg(data, 'PONG');
+    self.reciveMsg(data, data.type);
   });
 };
 
@@ -399,7 +426,9 @@ ChatRoomClient.prototype.bindEvent = function() {
     $('.chatroom-item[data-id="' + id + '"]').addClass('current');
     $(this).find('.count').text(0).css('visibility', 'hidden');
     this.totalCount -= parseInt($(this).find('.count').text());
-    $('.chatroom textarea').focus();
+    setTimeout(function() {
+      $('.chatroom textarea').focus();
+    }, 10);
   });
   $('.chatroom-tribes').on('click', 'i', function(evt) {
     evt.preventDefault();
@@ -467,6 +496,12 @@ ChatRoomClient.prototype.reciveMsg = function(data, type) {
   }
 };
 
+ChatRoomClient.prototype.ping = function() {
+  this.socket.emit('ping', {
+    id: this.userId
+  });
+};
+
 
 ChatRoomClient.prototype.createPrivateChat = function(data, setCurrent) {
   if($('.chatroom-item[data-id="' + data.id + '"]').size()) return;
@@ -496,12 +531,6 @@ ChatRoomClient.prototype.createPrivateChat = function(data, setCurrent) {
       msg: '与 ' + data.name + ' 私聊'
     }, data.toId);
   }
-};
-
-ChatRoomClient.prototype.ping = function() {
-  this.socket.emit('ping', {
-    id: this.userId
-  });
 };
 
 
