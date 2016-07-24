@@ -9,6 +9,15 @@
   body {
     font-size: 12px;
   }
+  .chatroom-feedback {
+    position: absolute;
+    bottom: 3px;
+    background: #EEE;
+    width: 159px;
+    height: 30px;
+    line-height: 30px;
+    text-align: center;
+  }
   .chatroom {
     font-size: 12px;
     position: fixed;
@@ -21,21 +30,21 @@
     background: #FFF;
     box-shadow: -3px -2px 8px -1px rgba(0,0,0,0.2);
     border-radius: 2px 0px 0px 2px;
+    transition: all 0.3s;
   }
   .chatroom-fold {
-    height: 40px;
-    width: 160px;
-    right: 0;
-    bottom: 0;
+    right: -404px;
+    bottom: -368px;
+    transition: all 0.3s;
   }
   .chatroom-fold .chatroom-tribe .count {
     right: 42px;
   }
   .chatroom-info {
     position: absolute;
-    right: 10px;
-    top: 4px;
     background: #FFF;
+    right: 10px;
+    top: 6px;
     cursor: pointer;
   }
   .chatroom-info:after {
@@ -47,7 +56,10 @@
     color: #F40;
     z-index: 10;
     position: relative;
-    top: 6px;
+    top: 5px;
+  }
+  .chatroom-fold .chatroom-info {
+    right: 412px;
   }
   .chatroom-tribe {
     -webkit-user-select: none;
@@ -271,6 +283,7 @@
     padding: 5px;
     color: #999;
   }
+
 </style>
 
 <div class="chatroom chatroom-fold">
@@ -314,10 +327,11 @@ ChatRoomClient.prototype.init = function() {
 ChatRoomClient.prototype.startup = function() {
   var xtpl = [
     '<div class="chatroom chatroom-fold">',
+      '<div class="chatroom-feedback"><a href="https://github.com/barretlee/blogChat" target="_blank">源码</a> | <a href="https://github.com/barretlee/blogChat/issues/new" target="_blank">反馈</a></div>',
       '<div class="chatroom-info"></div>',
       '<ul class="chatroom-tribes">',
         '<li class="chatroom-tribe current" data-id="group">',
-          '<span class="name">当前 <strong>1</strong> 人在线</span>',
+          '<span class="name">当前 <strong>1</strong> 人群聊</span>',
           '<span class="count">0</span>',
         '</li>',
       '</ul>',
@@ -330,7 +344,7 @@ ChatRoomClient.prototype.startup = function() {
       '</div>',
     '</div>'
   ].join('\n');
-  $('body').after(xtpl);
+  $('html').append(xtpl);
 }
 
 ChatRoomClient.prototype.connection = function(cb) {
@@ -345,6 +359,16 @@ ChatRoomClient.prototype.connection = function(cb) {
       self.userId = userInfo.user_id;
       self.userName = userInfo.name;
       self.userAvatar = userInfo.avatar_url;
+    } else if($.cookie('visitor') || $.cookie('visitor_history')) {
+      var info = $.cookie('visitor') || $.cookie('visitor_history');
+      try {
+        var info = JSON.parse(info);
+        if(info.id && info.name && info.avatar) {
+          self.userId = info.id;
+          self.userName = info.name;
+          self.userAvatar = info.avatar;
+        }
+      } catch(e) {}
     } else {
       if(window.sessionStorage) {
         var userId = window.sessionStorage.getItem('userId');
@@ -560,14 +584,14 @@ ChatRoomClient.prototype.addChatLog = function(data, isSelf) {
   if($itemToId.size()) {
     $target = $itemToId;
   }
-  $target.append($log).scrollTop($target.height());
+  $target.append($log).scrollTop(1E5);
 };
 
 ChatRoomClient.prototype.addInfoLog = function(data, id) {
   var $info = '<div class="chatroom-log-info">' + data.msg + '</div>';
   var id = id || 'group';
   var $target = $(".chatroom-item[data-id='" + id + "']");
-  $target.append($info).scrollTop($target.height());
+  $target.append($info).scrollTop(1E5);
 };
 
 ChatRoomClient.prototype.updateCount = function(id) {
