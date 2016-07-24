@@ -286,7 +286,8 @@
 
 </style>
 
-<div class="chatroom chatroom-fold">
+<!--
+<div class="chatroom">
   <div class="chatroom-info"></div>
   <ul class="chatroom-tribes">
     <li class="chatroom-tribe current" data-id="group">
@@ -302,12 +303,14 @@
     <div class="chatroom-pannel-ft"><textarea type="text" class="chatroom-input" placeholder="按 Ctrl+Enter 发送"></textarea></div>
   </div>
 </div>
+-->
 
 <script>
 var ChatRoomClient = function() {
+  this.users = [];
   this.totalCount = 0;
-  // this.socket = io.connect('http://123.56.230.53:29231/');
-  this.socket = io.connect('http://localhost:29231');
+  this.socket = io.connect('http://123.56.230.53:29231/');
+  // this.socket = io.connect('http://127.0.0.1:29231');
   this.startup();
   this.init();
 };
@@ -326,7 +329,7 @@ ChatRoomClient.prototype.init = function() {
 
 ChatRoomClient.prototype.startup = function() {
   var xtpl = [
-    '<div class="chatroom chatroom-fold">',
+    '<div class="chatroom">',
       '<div class="chatroom-feedback"><a href="https://github.com/barretlee/blogChat" target="_blank">源码</a> | <a href="https://github.com/barretlee/blogChat/issues/new" target="_blank">反馈</a></div>',
       '<div class="chatroom-info"></div>',
       '<ul class="chatroom-tribes">',
@@ -359,16 +362,6 @@ ChatRoomClient.prototype.connection = function(cb) {
       self.userId = userInfo.user_id;
       self.userName = userInfo.name;
       self.userAvatar = userInfo.avatar_url;
-    } else if($.cookie('visitor') || $.cookie('visitor_history')) {
-      var info = $.cookie('visitor') || $.cookie('visitor_history');
-      try {
-        var info = JSON.parse(info);
-        if(info.id && info.name && info.avatar) {
-          self.userId = info.id;
-          self.userName = info.name;
-          self.userAvatar = info.avatar;
-        }
-      } catch(e) {}
     } else {
       if(window.sessionStorage) {
         var userId = window.sessionStorage.getItem('userId');
@@ -398,6 +391,8 @@ ChatRoomClient.prototype.socketEvent = function() {
     if(data.id == self.userId) return;
     self.reciveMsg(data, 'BROADCAST');
     if(data.type == 'NEW') {
+      self.users.push(data.id);
+      if($.inArray(data.id, self.users) > -1) return false;
       return self.addInfoLog(data);
     }
     // if(data.type == 'LEAVE') {
@@ -407,6 +402,9 @@ ChatRoomClient.prototype.socketEvent = function() {
     self.updateCount('group');
   });
   self.socket.on('pm', function(data) {
+    if(data.type == 'OFFLINE') {
+      return self.addInfoLog(data, data.id);
+    }
     self.reciveMsg(data, 'PM');
     self.createPrivateChat(data);
     self.addChatLog(data);
@@ -499,7 +497,7 @@ ChatRoomClient.prototype.bindEvent = function() {
   if(/Mac OS/i.test(navigator.appVersion)) {
     $(".chatroom textarea").attr('placeholder', '按 Command+Enter 发送');
   }
-  $(window).on('beforeunload', function() {
+  $(window).on('beforeunload close', function() {
     self.socket.emit('disconnet', {
       id: self.userId
     });

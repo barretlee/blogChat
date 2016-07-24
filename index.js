@@ -52,6 +52,7 @@ ChatRoom.prototype.bindEvent = function() {
       if(!self.onlineUser[userId]) {
         // 广播新用户
         io.emit('broadcast', {
+          id: userId,
           msg: '欢迎 ' + userName + ' 加入群聊！',
           type: "NEW"
         });
@@ -99,6 +100,7 @@ ChatRoom.prototype.bindEvent = function() {
         });
       } else {
         socket.emit('pm', {
+          id: data.id,
           msg: '对方已下线' ,
           type: "OFFLINE"
         });
