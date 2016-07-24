@@ -2,7 +2,7 @@ var fs = require('fs');
 var path = require('path');
 
 var PORT = 29231;
-var PONG_DELTA = 5E3;
+var PONG_DELTA = 10E3;
 var NOT_FOUNT_MSG = '小胡子哥提醒您：404 了！';
 var FAVICON = fs.readFileSync(path.join(__dirname, 'favicon.ico'));
 
@@ -61,12 +61,12 @@ ChatRoom.prototype.bindEvent = function() {
 
     // 断开连接
     socket.on('disconnet', function(data) {
-      var userId = data.userId;
+      var userId = data.id;
       if(self.onlineUser[userId]) {
-        io.emit('broadcast', {
-          msg: '用户 ' + userId + ' 离开群聊',
-          type: "LEAVE"
-        });
+        // io.emit('broadcast', {
+        //   msg: '用户 ' + userId + ' 离开群聊',
+        //   type: "LEAVE"
+        // });
         delete self.onlineUser[userId];
       }
     });
@@ -111,7 +111,7 @@ ChatRoom.prototype.bindEvent = function() {
   }, PONG_DELTA);
 };
 
-ChatRoom.prototype.pong = function(id) {
+ChatRoom.prototype.pong = function(uid) {
   var self = this;
   var users = [];
   for(var id in self.onlineUser) {
@@ -121,16 +121,11 @@ ChatRoom.prototype.pong = function(id) {
       avatar: self.onlineUser[id].userAvatar
     });
   }
-  if(id) {
-    return self.onlineUser[id].emit('pong', {
-      users: users,
-      count: users.length,
-      type: 'PONG2'
-    });
-  }
-  self.io.emit('pong', {
+  var socket = uid ? self.onlineUser[uid] : self.io;
+  socket.emit('pong', {
     users: users,
-    count: users.length
+    count: users.length,
+    type: uid ? 'PONG2' : 'PONG'
   });
 };
 
