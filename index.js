@@ -52,7 +52,9 @@ ChatRoom.prototype.bindEvent = function() {
       if(!self.onlineUser[userId]) {
         // 广播新用户
         io.emit('broadcast', {
-          userId: userId,
+          id: userId,
+          name: userName,
+          avatar: userAvatar,
           msg: '欢迎 ' + userName + ' 加入群聊！',
           type: "NEW"
         });
@@ -76,9 +78,10 @@ ChatRoom.prototype.bindEvent = function() {
     socket.on('gm', function(data) {
       io.emit('broadcast', {
         msg: data.msg,
-        userId: data.id,
+        id: data.id,
         name: data.name,
-        avatar: data.avatar
+        avatar: data.avatar,
+        type: 'BROADCAST'
       });
     });
 
@@ -89,14 +92,15 @@ ChatRoom.prototype.bindEvent = function() {
 
     // 私聊
     socket.on('pm', function(data) {
-      var toUserId = data.toId;
+      var toUserId = data.targetId;
       var toSocket = self.onlineUser[toUserId];
       if(toSocket) {
         toSocket.emit('pm', {
           msg: data.msg,
           id: data.id,
           name: data.name,
-          avatar: data.avatar
+          avatar: data.avatar,
+          type: "PM"
         });
       } else {
         socket.emit('pm', {
@@ -127,7 +131,7 @@ ChatRoom.prototype.pong = function(uid) {
   socket.emit('pong', {
     users: users,
     count: users.length,
-    type: uid ? 'PONG2' : 'PONG'
+    type: uid ? 'PING-BACK' : 'PONG'
   });
 };
 

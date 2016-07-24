@@ -1,5 +1,350 @@
 <script src="http://cdn.staticfile.org/socket.io/1.3.7/socket.io.js"></script>
 <script src="http://cdn.staticfile.org/jquery/2.2.1/jquery.min.js"></script>
+<script>
+
+function htmlspecialchars(str){
+  str = str.replace(/&/g, '&amp;');
+  str = str.replace(/</g, '&lt;');
+  str = str.replace(/>/g, '&gt;');
+  str = str.replace(/"/g, '&quot;');
+  str = str.replace(/'/g, '&#039;');
+  return str;
+}
+var ChatRoomClient = function() {
+  this.users = [];
+  // this.socket = io.connect('http://123.56.230.53:29231/');
+  this.socket = io.connect('http://localhost:29231');
+  this.startup();
+  this.init();
+};
+
+ChatRoomClient.prototype.init = function() {
+  this.connection();
+  this.socketEvent();
+  this.bindEvent();
+  this.addInfoLog({
+    msg: '注意：聊天日志不会保存，请注意备份.'
+  }, 'group');
+  this.addInfoLog({
+    msg: '提示：点击头像可进入私聊'
+  }, 'group');
+};
+
+ChatRoomClient.prototype.startup = function() {
+  var xtpl = [
+    '<div class="chatroom">',
+      '<div class="chatroom-feedback"><a href="https://github.com/barretlee/blogChat" target="_blank">源码</a> | <a href="https://github.com/barretlee/blogChat/issues/new" target="_blank">反馈</a></div>',
+      '<div class="chatroom-info"></div>',
+      '<ul class="chatroom-tribes">',
+        '<li class="chatroom-tribe current" data-id="group">',
+          '<span class="name">当前 <strong>1</strong> 人群聊</span>',
+          '<span class="count">0</span>',
+        '</li>',
+      '</ul>',
+      '<div class="chatroom-pannels">',
+        '<div class="chatroom-pannel-bd">',
+          '<div class="chatroom-item current" data-id="group">',
+          '</div>',
+        '</div>',
+        '<div class="chatroom-pannel-ft"><textarea type="text" class="chatroom-input" placeholder="按 Ctrl+Enter 发送"></textarea></div>',
+      '</div>',
+    '</div>'
+  ].join('\n');
+  $('html').append(xtpl);
+}
+
+ChatRoomClient.prototype.connection = function(cb) {
+  var self = this;
+  self.socket.on('connected', function(data) {
+    self.userId = data.id;
+    self.userName = self.userId.slice(2);
+    self.userAvatar = 'http://avatar.duoshuo.com/avatar-50/292/117200.jpg';
+    if(window.DUOSHUO && window.DUOSHUO.visitor
+       && window.DUOSHUO.visitor.data.user_id) {
+      var userInfo = window.DUOSHUO.visitor.data;
+      self.userId = userInfo.user_id;
+      self.userName = userInfo.name;
+      self.userAvatar = userInfo.avatar_url;
+    } else if($.cookie && ($.cookie('visitor') || $.cookie('visitor_history'))) {
+      var info = $.cookie('visitor') || $.cookie('visitor_history');
+      try {
+        var info = JSON.parse(info);
+        if(info.id && info.name && info.avatar) {
+          self.userId = info.id;
+          self.userName = info.name;
+          self.userAvatar = info.avatar;
+        }
+      } catch(e) {}
+    } else {
+      if(window.sessionStorage) {
+        var userId = window.sessionStorage.getItem('userId');
+        if(userId) {
+          self.userId = userId;
+          self.userName = userId.slice(2);
+        } else {
+          window.sessionStorage.setItem('userId', self.userId);
+        }
+      }
+    }
+    if(window.sessionStorage) {
+      window.sessionStorage.setItem('userId', self.userId);
+    }
+    self.changeName();
+    // console.info('ID: ' + self.userId);
+    self.socket.emit('createUser', {
+      userId: self.userId,
+      userName: self.userName,
+      userAvatar: self.userAvatar
+    });
+  });
+};
+
+ChatRoomClient.prototype.changeName = function() {
+  if($('.chatroom-rename').size()) return;
+  var self = this;
+  var str = '<div class="chatroom-rename" style="display:none;"><input type="text" value="' +
+    htmlspecialchars(self.userName) +'" placeholder="不要取太长的名字啦~"><span>确认</span></div>';
+  $(str).appendTo($('.chatroom')).fadeIn();
+  $('.chatroom-rename span').on('click', function() {
+    var $input = $('.chatroom-rename input');
+    if($.trim($input.val())) {
+      self.userName = $input.val().slice(0, 20);
+      self.socket.emit('createUser', {
+        userId: self.userId,
+        userName: self.userName,
+        userAvatar: self.userAvatar
+      });
+      $('.chatroom-rename').remove();
+    }
+  });
+}
+
+ChatRoomClient.prototype.socketEvent = function() {
+  var self = this;
+  self.socket.on('broadcast', function(data) {
+    if(data.id == self.userId) return;
+    if(data.type == 'NEW') {
+      if($.inArray(data.id, self.users) > -1) return false;
+      self.users.push(data.id);
+      return self.addWelcomeLog(data);
+    }
+    // if(data.type == 'LEAVE') {
+    //   return self.addInfoLog(data);
+    // }
+    self.addChatLog(data, 'group');
+    self.updateCount('group');
+  });
+  self.socket.on('pm', function(data) {
+    if(data.type == 'OFFLINE') {
+      return self.addInfoLog(data, data.id);
+    }
+    self.createPrivateChat(data);
+    self.addChatLog(data, data.id);
+    self.updateCount(data.id);
+  });
+  self.socket.on('pong', function(data) {
+    var type = data.type;
+    if(type === 'PONG') {
+      $('.chatroom-tribe .name strong').text(data.count);
+      if($('.chatroom').hasClass('chatroom-fold') && this.totalCount) {
+        $('.chatroom .count').eq(0).text(this.totalCount).css('visibility', 'visible');
+      }
+    } else if(type === 'PING-BACK') {
+      console.warn(data);
+    }
+  });
+};
+
+ChatRoomClient.prototype.bindEvent = function() {
+  var self = this;
+  $('.chatroom').on('keydown', function(evt) {
+    if(evt.keyCode == 27) {
+      $(this).addClass('chatroom-fold');
+    }
+  });
+  $('.chatroom-input').on('keydown', function(evt) {
+    var $this = $(this);
+    if((evt.ctrlKey || evt.metaKey) && evt.keyCode == '13' && $.trim($this.val())) {
+      var targetId = $('.chatroom-tribe.current').attr('data-id');
+      var data = {
+        id: self.userId,
+        msg: $this.val(),
+        name: self.userName,
+        avatar: self.userAvatar,
+        targetId: targetId
+      };
+      self.socket.emit(targetId == 'group' ? 'gm' : 'pm', data);
+      self.addChatLog(data, targetId, true);
+      $this.val('');
+      return false;
+    }
+  });
+  $('.chatroom-tribes').on('click', 'li', function(evt) {
+    evt.preventDefault();
+    var id = $(this).attr('data-id');
+    $('.chatroom-tribes').find('li').removeClass('current');
+    $('.chatroom-item').removeClass('current');
+    $(this).addClass('current');
+    $('.chatroom-item[data-id="' + id + '"]').addClass('current');
+    $(this).find('.count').text(0).css('visibility', 'hidden');
+    this.totalCount -= parseInt($(this).find('.count').text());
+    setTimeout(function() {
+      $('.chatroom textarea').focus();
+    }, 10);
+  });
+  $('.chatroom-tribes').on('click', 'i', function(evt) {
+    evt.preventDefault();
+    evt.stopImmediatePropagation();
+    var $p = $(this).parent('li');
+    var id = $p.attr('data-id');
+    $p.remove();
+    $(".chatroom-item[data-id='" + id + "']").remove();
+    $('.chatroom-item').removeClass('current');
+    $('.chatroom-item[data-id="group"]').addClass('current');
+    $('.chatroom-tribe[data-id="group"]').addClass('current');
+    this.totalCount -= parseInt($(this).find('.count').text());
+  });
+  $(".chatroom-item").on('click', '.avatar, .time, .name', function(evt) {
+    evt.preventDefault();
+    evt.stopImmediatePropagation();
+    var $this = $(this);
+    var $p = $this.parent('.chatroom-log');
+    var avatar = $p.find('.avatar img').attr('src');
+    var name = $p.find('.time b').text();
+    var id = $p.find('.time b').attr('data-id');
+    if(id === self.userId) return;
+    if($this.parent().hasClass('chatroom-log-welcome')) {
+      $p = $this.parent();
+      id = $p.attr('data-id');
+      avatar = $p.find('.avatar').attr('src');
+      name = $p.find('.name').text();
+    }
+    self.createPrivateChat({
+      avatar: avatar,
+      name: name,
+      id: id
+    }, true);
+    self.addInfoLog({
+      msg: '与 ' + name + ' 私聊'
+    }, id);
+  });
+  $(".chatroom-info").on('click', function(evt) {
+    evt.preventDefault();
+    // $('.chatroom').toggleClass('chatroom-fold');
+    if(!$('.chatroom').hasClass('chatroom-fold')) {
+      $('.chatroom').addClass('chatroom-fold');
+      $('.chatroom textarea').focus();
+      $('.chatroom-tribe').removeClass('current');
+      $('.chatroom-item').removeClass('current');
+      $('.chatroom-tribes>li').first().addClass('current');
+      $('.chatroom-item').first().addClass('current');
+      $('.chatroom .count').eq(0).text(0).css('visibility', 'hidden');
+    } else {
+      $('.chatroom').removeClass('chatroom-fold');
+    }
+  });
+  if(/Mac OS/i.test(navigator.appVersion)) {
+    $(".chatroom textarea").attr('placeholder', '按 Command+Enter 发送');
+  }
+  $(window).on('beforeunload close', function() {
+    self.socket.emit('disconnet', {
+      id: self.userId
+    });
+  });
+};
+
+ChatRoomClient.prototype.ping = function() {
+  this.socket.emit('ping', {
+    id: this.userId
+  });
+};
+
+ChatRoomClient.prototype.createPrivateChat = function(data, setCurrent) {
+  if($('.chatroom-item[data-id="' + data.id + '"]').size()) return;
+  var tabXtpl = [
+    '<li class="chatroom-tribe" data-id="<% id %>">',
+      '<img src="<% avatar %>" alt="<% name %>">',
+      '<span class="name"><% name %></span>',
+      '<span class="count">0</span>',
+      '<i class="iconfont">╳</i>',
+    '</li>'
+  ];
+  var $li = tabXtpl.join('').replace(/<%\s*?(\w+)\s*?%>/gm, function($0, $1) {
+    return data && data[$1] || '';
+  });
+  $(".chatroom-tribes").append($li);
+  var id = data && data.id;
+  var $pannel = '<div class="chatroom-item" data-id="' + id + '"></div>';
+  $(".chatroom-pannel-bd").append($pannel);
+  if(setCurrent) {
+    $('.chatroom-tribe').removeClass('current');
+    $('.chatroom-item').removeClass('current');
+    $('.chatroom-tribes>li').last().addClass('current');
+    $('.chatroom-item').last().addClass('current');
+  }
+  if(data.targetId) {
+    this.addInfoLog({
+      msg: '与 ' + data.name + ' 私聊'
+    }, data.targetId);
+  }
+};
+
+ChatRoomClient.prototype.addChatLog = function(data, id, isSelf) {
+  if(isSelf) {
+    data.name = '我';
+  }
+  var logXtpl = [
+    '<div class="chatroom-log' + (isSelf ? ' myself' : '') + '">',
+      '<span class="avatar"><img src="<% avatar %>" alt="<% name %>"></span>',
+      '<span class="time"><b data-id="<% id %>"><% name %></b> ' + new Date().toLocaleString() + '</span>',
+      '<span class="detail"><% msg %></span>',
+    '</div>'
+  ];
+  var $log = logXtpl.join('\n').replace(/<%\s*?(\w+)\s*?%>/gm, function($0, $1) {
+    if($1 === 'avatar' && (!data || !data[$1])) {
+      return 'http://avatar.duoshuo.com/avatar-50/292/117200.jpg';
+    }
+    return htmlspecialchars(data && data[$1] || '');
+  });
+  var $target = $(".chatroom-item[data-id='" + id + "']");
+  $target.append($log).scrollTop(1E5);
+};
+
+ChatRoomClient.prototype.addInfoLog = function(data, id) {
+  var $info = '<div class="chatroom-log-info">' + htmlspecialchars(data.msg) + '</div>';
+  var $target = $(".chatroom-item[data-id='" + htmlspecialchars(id) + "']");
+  $target.append($info).scrollTop(1E5);
+};
+
+ChatRoomClient.prototype.addWelcomeLog = function(data) {
+  var $info = '<div class="chatroom-log-info chatroom-log-welcome" data-id="' +
+      htmlspecialchars(data.id) + '">欢迎 <img class="avatar" src="' + htmlspecialchars(data.avatar)
+        + '"><strong class="name">' + htmlspecialchars(data.name) + '</strong> 加入群聊！</div>';
+  var $target = $(".chatroom-item[data-id='group']");
+  $target.append($info).scrollTop(1E5);
+};
+
+ChatRoomClient.prototype.updateCount = function(id) {
+  var $li = $('.chatroom-tribe[data-id="' + id + '"]');
+  if(!$li.size() || $li.hasClass('current')) return;
+  var $target = $li.find('.count');
+  var count = parseInt($target.text());
+  if(++count > 99) {
+    count = 99;
+  }
+  $target.text(count).css('visibility', 'visible');
+  this.totalCount++;
+  if(this.totalCount > 99) {
+    this.totalCount = 99;
+  }
+  if($('.chatroom').hasClass('chatroom-fold')) {
+    $('.chatroom .count').eq(0).text(this.totalCount).css('visibility', 'visible');
+  }
+};
+
+window.chatRoomClient = new ChatRoomClient();
+</script>
+
 
 <style>
   * {
@@ -42,10 +387,10 @@
   }
   .chatroom-info {
     position: absolute;
-    background: #FFF;
     right: 10px;
     top: 6px;
     cursor: pointer;
+    z-index: 12;
   }
   .chatroom-info:after {
     content: '[收起]';
@@ -197,6 +542,10 @@
     float: left;
     color: #999;
   }
+  .chatroom-log .time b {
+    text-decoration: underline;
+    font-weight: normal;
+  }
   .chatroom-log .time b:hover {
     cursor: pointer;
     color: #666;
@@ -283,9 +632,63 @@
     padding: 5px;
     color: #999;
   }
-
+  .chatroom-rename {
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 0;
+    bottom: 0;
+    background: rgba(0,0,0,0.5);
+  }
+  .chatroom-rename span {
+    cursor: pointer;
+    top: 50%;
+    margin-top: -15px;
+    position: absolute;
+    left: 400px;
+    background: #EEE;
+    height: 30px;
+    line-height: 30px;
+    padding: 0 15px;
+    border-radius: 2px;
+    text-align: center;
+  }
+  .chatroom-rename span:hover {
+    background: #ccc;
+  }
+  .chatroom-rename input {
+    position: absolute;
+    left: 120px;
+    top: 50%;
+    height: 30px;
+    line-height: 30px;
+    text-indent: 10px;
+    border: none;
+    width: 250px;
+    border-radius: 3px;
+    margin-top: -15px;
+    outline: none;
+  }
+  .chatroom-fold .chatroom-rename {
+    display: none !important;
+  }
+  .chatroom-log-welcome {
+    padding-left: 20px;
+    padding-right: 20px;
+  }
+  .chatroom-log-welcome img {
+    width: 28px;
+    vertical-align: middle;
+    margin: 0 2px;
+    border-radius: 100%;
+    cursor: pointer;
+  }
+  .chatroom-log-welcome strong {
+    font-weight: normal;
+    cursor:pointer;
+    text-decoration: underline;
+  }
 </style>
-
 <!--
 <div class="chatroom">
   <div class="chatroom-info"></div>
@@ -304,311 +707,3 @@
   </div>
 </div>
 -->
-
-<script>
-var ChatRoomClient = function() {
-  this.users = [];
-  this.totalCount = 0;
-  // this.socket = io.connect('http://123.56.230.53:29231/');
-  this.socket = io.connect('http://127.0.0.1:29231');
-  this.startup();
-  this.init();
-};
-
-ChatRoomClient.prototype.init = function() {
-  this.connection();
-  this.socketEvent();
-  this.bindEvent();
-  this.addInfoLog({
-    msg: '注意：聊天日志不会保存，请注意备份.'
-  });
-  this.addInfoLog({
-    msg: '提示：点击头像可进入私聊'
-  });
-};
-
-ChatRoomClient.prototype.startup = function() {
-  var xtpl = [
-    '<div class="chatroom">',
-      '<div class="chatroom-feedback"><a href="https://github.com/barretlee/blogChat" target="_blank">源码</a> | <a href="https://github.com/barretlee/blogChat/issues/new" target="_blank">反馈</a></div>',
-      '<div class="chatroom-info"></div>',
-      '<ul class="chatroom-tribes">',
-        '<li class="chatroom-tribe current" data-id="group">',
-          '<span class="name">当前 <strong>1</strong> 人群聊</span>',
-          '<span class="count">0</span>',
-        '</li>',
-      '</ul>',
-      '<div class="chatroom-pannels">',
-        '<div class="chatroom-pannel-bd">',
-          '<div class="chatroom-item current" data-id="group">',
-          '</div>',
-        '</div>',
-        '<div class="chatroom-pannel-ft"><textarea type="text" class="chatroom-input" placeholder="按 Ctrl+Enter 发送"></textarea></div>',
-      '</div>',
-    '</div>'
-  ].join('\n');
-  $('html').append(xtpl);
-}
-
-ChatRoomClient.prototype.connection = function(cb) {
-  var self = this;
-  self.socket.on('connected', function(data) {
-    self.userId = data.id;
-    self.userName = self.userId.slice(2);
-    self.userAvatar = 'http://avatar.duoshuo.com/avatar-50/292/117200.jpg';
-    if(window.DUOSHUO && window.DUOSHUO.visitor
-       && window.DUOSHUO.visitor.data.user_id) {
-      var userInfo = window.DUOSHUO.visitor.data;
-      self.userId = userInfo.user_id;
-      self.userName = userInfo.name;
-      self.userAvatar = userInfo.avatar_url;
-    } else {
-      if(window.sessionStorage) {
-        var userId = window.sessionStorage.getItem('userId');
-        if(userId) {
-          self.userId = userId;
-          self.userName = userId.slice(2);
-        } else {
-          window.sessionStorage.setItem('userId', self.userId);
-        }
-      }
-    }
-    if(window.sessionStorage) {
-      window.sessionStorage.setItem('userId', self.userId);
-    }
-    // console.info('ID: ' + self.userId);
-    self.socket.emit('createUser', {
-      userId: self.userId,
-      userName: self.userName,
-      userAvatar: self.userAvatar
-    });
-  });
-};
-
-ChatRoomClient.prototype.socketEvent = function() {
-  var self = this;
-  self.socket.on('broadcast', function(data) {
-    if(data.userId == self.userId) return;
-    self.reciveMsg(data, 'BROADCAST');
-    if(data.type == 'NEW') {
-      if($.inArray(data.userId, self.users) > -1) return false;
-      self.users.push(data.userId);
-      return self.addInfoLog(data);
-    }
-    // if(data.type == 'LEAVE') {
-    //   return self.addInfoLog(data);
-    // }
-    self.addChatLog(data);
-    self.updateCount('group');
-  });
-  self.socket.on('pm', function(data) {
-    if(data.type == 'OFFLINE') {
-      return self.addInfoLog(data, data.id);
-    }
-    self.reciveMsg(data, 'PM');
-    self.createPrivateChat(data);
-    self.addChatLog(data);
-    self.updateCount(data.id);
-  });
-  self.socket.on('pong', function(data) {
-    self.reciveMsg(data, data.type);
-  });
-};
-
-ChatRoomClient.prototype.bindEvent = function() {
-  var self = this;
-  $('.chatroom').on('keydown', function(evt) {
-    if(evt.keyCode == 27) {
-      $(this).addClass('chatroom-fold');
-    }
-  });
-  $('.chatroom-input').on('keydown', function(evt) {
-    var $this = $(this);
-    if((evt.ctrlKey || evt.metaKey) && evt.keyCode == '13' && $.trim($this.val())) {
-      var type = $('.chatroom-tribe.current').attr('data-id');
-      var data = {
-        id: self.userId,
-        msg: $this.val(),
-        name: self.userName,
-        avatar: self.userAvatar,
-        toId: type
-      };
-      self.socket.emit(type == 'group' ? 'gm' : 'pm', data);
-      self.addChatLog(data, true);
-      $this.val('');
-      return false;
-    }
-  });
-  $('.chatroom-tribes').on('click', 'li', function(evt) {
-    evt.preventDefault();
-    var id = $(this).attr('data-id');
-    $('.chatroom-tribes').find('li').removeClass('current');
-    $('.chatroom-item').removeClass('current');
-    $(this).addClass('current');
-    $('.chatroom-item[data-id="' + id + '"]').addClass('current');
-    $(this).find('.count').text(0).css('visibility', 'hidden');
-    this.totalCount -= parseInt($(this).find('.count').text());
-    setTimeout(function() {
-      $('.chatroom textarea').focus();
-    }, 10);
-  });
-  $('.chatroom-tribes').on('click', 'i', function(evt) {
-    evt.preventDefault();
-    evt.stopImmediatePropagation();
-    var $p = $(this).parent('li');
-    var id = $p.attr('data-id');
-    $p.remove();
-    $(".chatroom-item[data-id='" + id + "']").remove();
-    $('.chatroom-item').removeClass('current');
-    $('.chatroom-item[data-id="group"]').addClass('current');
-    $('.chatroom-tribe[data-id="group"]').addClass('current');
-    this.totalCount -= parseInt($(this).find('.count').text());
-  });
-  $(".chatroom-item").on('click', '.avatar, .time', function(evt) {
-    evt.preventDefault();
-    evt.stopImmediatePropagation();
-    var $this = $(this);
-    var $p = $this.parent('.chatroom-log');
-    var avatar = $p.find('.avatar img').attr('src');
-    var name = $p.find('.time b').text();
-    var id = $p.find('.time b').attr('data-id');
-    if(id === self.userId) return;
-    self.createPrivateChat({
-      avatar: avatar,
-      name: name,
-      id: id
-    }, true);
-  });
-  $(".chatroom-info").on('click', function(evt) {
-    evt.preventDefault();
-    // $('.chatroom').toggleClass('chatroom-fold');
-    if(!$('.chatroom').hasClass('chatroom-fold')) {
-      $('.chatroom').addClass('chatroom-fold');
-      $('.chatroom textarea').focus();
-      $('.chatroom-tribe').removeClass('current');
-      $('.chatroom-item').removeClass('current');
-      $('.chatroom-tribes>li').first().addClass('current');
-      $('.chatroom-item').first().addClass('current');
-      $('.chatroom .count').eq(0).text(0).css('visibility', 'hidden');
-    } else {
-      $('.chatroom').removeClass('chatroom-fold');
-    }
-  });
-  if(/Mac OS/i.test(navigator.appVersion)) {
-    $(".chatroom textarea").attr('placeholder', '按 Command+Enter 发送');
-  }
-  $(window).on('beforeunload close', function() {
-    self.socket.emit('disconnet', {
-      id: self.userId
-    });
-  });
-};
-
-
-ChatRoomClient.prototype.reciveMsg = function(data, type) {
-  if(type === 'PONG') {
-    $('.chatroom-tribe .name strong').text(data.count);
-    if($('.chatroom').hasClass('chatroom-fold') && this.totalCount) {
-      $('.chatroom .count').eq(0).text(this.totalCount).css('visibility', 'visible');
-    }
-    return;
-  }
-  if(type === 'PONG2') {
-    console.warn(data);
-  }
-};
-
-ChatRoomClient.prototype.ping = function() {
-  this.socket.emit('ping', {
-    id: this.userId
-  });
-};
-
-
-ChatRoomClient.prototype.createPrivateChat = function(data, setCurrent) {
-  if($('.chatroom-item[data-id="' + data.id + '"]').size()) return;
-  var tabXtpl = [
-    '<li class="chatroom-tribe" data-id="<% id %>">',
-      '<img src="<% avatar %>" alt="<% name %>">',
-      '<span class="name"><% name %></span>',
-      '<span class="count">0</span>',
-      '<i class="iconfont">╳</i>',
-    '</li>'
-  ];
-  var $li = tabXtpl.join('').replace(/<%\s*?(\w+)\s*?%>/gm, function($0, $1) {
-    return data && data[$1] || '';
-  });
-  $(".chatroom-tribes").append($li);
-  var id = data && data.id;
-  var $pannel = '<div class="chatroom-item" data-id="' + id + '"></div>';
-  $(".chatroom-pannel-bd").append($pannel);
-  if(setCurrent) {
-    $('.chatroom-tribe').removeClass('current');
-    $('.chatroom-item').removeClass('current');
-    $('.chatroom-tribes>li').last().addClass('current');
-    $('.chatroom-item').last().addClass('current');
-  }
-  if(data.toId) {
-    this.addInfoLog({
-      msg: '与 ' + data.name + ' 私聊'
-    }, data.toId);
-  }
-};
-
-
-ChatRoomClient.prototype.addChatLog = function(data, isSelf) {
-  if(isSelf) {
-    data.name = '我';
-  }
-  var logXtpl = [
-    '<div class="chatroom-log' + (isSelf ? ' myself' : '') + '">',
-      '<span class="avatar"><img src="<% avatar %>" alt="<% name %>"></span>',
-      '<span class="time"><b data-id="<% id %>"><% name %></b> ' + new Date().toLocaleString() + '</span>',
-      '<span class="detail"><% msg %></span>',
-    '</div>'
-  ];
-  var $log = logXtpl.join('\n').replace(/<%\s*?(\w+)\s*?%>/gm, function($0, $1) {
-    if($1 === 'avatar' && (!data || !data[$1])) {
-      return 'http://avatar.duoshuo.com/avatar-50/292/117200.jpg';
-    }
-    return data && data[$1] || '';
-  });
-  var $target = $(".chatroom-item[data-id='group']");
-  var $itemId = $(".chatroom-item[data-id='" + (data.userId || data.id) + "']");
-  var $itemToId = $(".chatroom-item[data-id='" + data.toId + "']");
-  if($itemId.size()) {
-    $target = $itemId;
-  }
-  if($itemToId.size()) {
-    $target = $itemToId;
-  }
-  $target.append($log).scrollTop(1E5);
-};
-
-ChatRoomClient.prototype.addInfoLog = function(data, id) {
-  var $info = '<div class="chatroom-log-info">' + data.msg + '</div>';
-  var id = id || 'group';
-  var $target = $(".chatroom-item[data-id='" + id + "']");
-  $target.append($info).scrollTop(1E5);
-};
-
-ChatRoomClient.prototype.updateCount = function(id) {
-  var $li = $('.chatroom-tribe[data-id="' + id + '"]');
-  if(!$li.size() || $li.hasClass('current')) return;
-  var $target = $li.find('.count');
-  var count = parseInt($target.text());
-  if(++count > 99) {
-    count = 99;
-  }
-  $target.text(count).css('visibility', 'visible');
-  this.totalCount++;
-  if(this.totalCount > 99) {
-    this.totalCount = 99;
-  }
-  if($('.chatroom').hasClass('chatroom-fold')) {
-    $('.chatroom .count').eq(0).text(this.totalCount).css('visibility', 'visible');
-  }
-};
-
-window.chatRoomClient = new ChatRoomClient();
-</script>
