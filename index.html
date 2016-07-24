@@ -388,11 +388,11 @@ ChatRoomClient.prototype.connection = function(cb) {
 ChatRoomClient.prototype.socketEvent = function() {
   var self = this;
   self.socket.on('broadcast', function(data) {
-    if(data.id == self.userId) return;
+    if(data.userId == self.userId) return;
     self.reciveMsg(data, 'BROADCAST');
     if(data.type == 'NEW') {
-      self.users.push(data.id);
-      if($.inArray(data.id, self.users) > -1) return false;
+      if($.inArray(data.userId, self.users) > -1) return false;
+      self.users.push(data.userId);
       return self.addInfoLog(data);
     }
     // if(data.type == 'LEAVE') {

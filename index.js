@@ -52,7 +52,7 @@ ChatRoom.prototype.bindEvent = function() {
       if(!self.onlineUser[userId]) {
         // 广播新用户
         io.emit('broadcast', {
-          id: userId,
+          userId: userId,
           msg: '欢迎 ' + userName + ' 加入群聊！',
           type: "NEW"
         });
