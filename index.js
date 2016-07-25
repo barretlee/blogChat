@@ -59,7 +59,10 @@ ChatRoom.prototype.bindEvent = function() {
           type: "NEW"
         });
       }
-      self.onlineUser[userId] = Object.assign(socket, data);
+      self.onlineUser[userId] = socket || {};
+      for(var key in data) {
+        self.onlineUser[userId][key] = data[key];
+      }
     });
 
     // 断开连接
