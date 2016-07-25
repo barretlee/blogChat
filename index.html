@@ -187,7 +187,9 @@ ChatRoomClient.prototype.bindEvent = function() {
     $(this).addClass('current');
     $('.chatroom-item[data-id="' + id + '"]').addClass('current');
     $(this).find('.count').text(0).css('visibility', 'hidden');
-    this.totalCount -= parseInt($(this).find('.count').text());
+    var count = parseInt($(this).find('.count').text());
+    count = isNaN(count) ? 0 : +count;
+    this.totalCount -= count;
     setTimeout(function() {
       $('.chatroom textarea').focus();
     }, 10);
@@ -202,7 +204,9 @@ ChatRoomClient.prototype.bindEvent = function() {
     $('.chatroom-item').removeClass('current');
     $('.chatroom-item[data-id="group"]').addClass('current');
     $('.chatroom-tribe[data-id="group"]').addClass('current');
-    this.totalCount -= parseInt($(this).find('.count').text());
+    var count = parseInt($(this).find('.count').text());
+    count = isNaN(count) ? 0 : +count;
+    this.totalCount -= count;;
   });
   $(".chatroom-item").on('click', '.avatar, .time, .name', function(evt) {
     evt.preventDefault();
@@ -332,6 +336,7 @@ ChatRoomClient.prototype.updateCount = function(id) {
   // if(!$li.size() || $li.hasClass('current')) return;
   var $target = $li.find('.count');
   var count = parseInt($target.text());
+  count = isNaN(count) : 0 ? +count;
   if(++count > 99) {
     count = 99;
   }
