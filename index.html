@@ -270,7 +270,7 @@ ChatRoomClient.prototype.createPrivateChat = function(data, setCurrent) {
     '</li>'
   ];
   var $li = tabXtpl.join('').replace(/<%\s*?(\w+)\s*?%>/gm, function($0, $1) {
-    return data && data[$1] || '';
+    return htmlspecialchars(data && data[$1] || '');
   });
   $(".chatroom-tribes").append($li);
   var id = data && data.id;
@@ -284,7 +284,7 @@ ChatRoomClient.prototype.createPrivateChat = function(data, setCurrent) {
   }
   if(data.targetId) {
     this.addInfoLog({
-      msg: '与 ' + data.name + ' 私聊'
+      msg: '与 ' + htmlspecialchars(data.name) + ' 私聊'
     }, data.targetId);
   }
 };

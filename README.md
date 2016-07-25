@@ -5,6 +5,15 @@ It's a simple chat system, can be inserted to anywhere.
 
 Demo: http://123.56.230.53:29231/
 
+### Usage
+
+```bash
+git clone https://github.com/barretlee/blogChat.git
+cd blogChat;
+npm i;
+node index;
+```
+
 ### Screenshot
 
 - Register Name：
