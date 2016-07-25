@@ -24,6 +24,14 @@ node index;
 
 ![Chat](http://ww4.sinaimg.cn/large/6c0378f8gw1f65gidryyxj20fy0bzglz.jpg)
 
+### Changelog
+
+- detect robot at server
+- detect robot at client
+- support custom username
+- support private chat
+- welcome new user
+
 ### LICENSE
 
 MIT
