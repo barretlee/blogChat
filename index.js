@@ -79,6 +79,32 @@ ChatRoom.prototype.bindEvent = function() {
 
     // 群聊，广播信息
     socket.on('gm', function(data) {
+      var socket = self.onlineUser[data.id];
+      if(socket) {
+        var nowTime = Math.floor(new Date().getTime() / 1000);
+        if(socket.speakTotalTimes > 200) {
+          return socket.emit('pm', {
+            msg: '发送失败，你咋这多话要说？等会儿再来吧。',
+            id: 'system',
+            name: 'system',
+            avatar: null,
+            type: "ATTENSION"
+          });
+        }
+        if(socket.lastSpeakTime && nowTime - socket.lastSpeakTime < 3) {
+          return socket.emit('pm', {
+            msg: '发送失败，请注意语速！',
+            id: 'system',
+            name: 'system',
+            avatar: null,
+            type: "ATTENSION"
+          });
+        }
+        socket.lastSpeakTime = Math.floor(new Date().getTime() / 1000);
+        socket.lastSpeakContent = data.msg;
+        socket.speakTotalTimes = socket.speakTotalTimes || 0;
+        socket.speakTotalTimes++;
+      }
       io.emit('broadcast', {
         msg: data.msg,
         id: data.id,
