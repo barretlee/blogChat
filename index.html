@@ -323,7 +323,7 @@ ChatRoomClient.prototype.addWelcomeLog = function(data) {
       htmlspecialchars(data.id) + '">欢迎 <img class="avatar" src="' + htmlspecialchars(data.avatar)
         + '"><strong class="name">' + htmlspecialchars(data.name) + '</strong> 加入群聊！</div>';
   var $target = $(".chatroom-item[data-id='group']");
-  $target.append($info).scrollTop(1E5);
+  // $target.append($info).scrollTop(1E5);
 };
 
 ChatRoomClient.prototype.updateCount = function(id) {
