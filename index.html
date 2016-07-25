@@ -307,13 +307,15 @@ ChatRoomClient.prototype.addChatLog = function(data, id, isSelf) {
     return htmlspecialchars(data && data[$1] || '');
   });
   var $target = $(".chatroom-item[data-id='" + id + "']");
-  $target.append($log).scrollTop(1E5);
+  if(isSelf) {
+    $target.append($log).scrollTop(1E5);
+  }
 };
 
 ChatRoomClient.prototype.addInfoLog = function(data, id) {
   var $info = '<div class="chatroom-log-info">' + htmlspecialchars(data.msg) + '</div>';
   var $target = $(".chatroom-item[data-id='" + htmlspecialchars(id) + "']");
-  $target.append($info).scrollTop(1E5);
+  // $target.append($info).scrollTop(1E5);
 };
 
 ChatRoomClient.prototype.addWelcomeLog = function(data) {
