@@ -217,7 +217,8 @@ ChatRoomClient.prototype.bindEvent = function() {
     $('.chatroom-tribe[data-id="group"]').addClass('current');
     var count = parseInt($(this).find('.count').text());
     count = isNaN(count) ? 0 : +count;
-    this.totalCount -= count;;
+    this.totalCount -= count;
+    $('.chatroom-pannel-bd').scrollTop(1E5);
   });
   $(".chatroom-item").on('click', '.avatar, .time, .name', function(evt) {
     evt.preventDefault();
