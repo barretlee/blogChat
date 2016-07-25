@@ -14,7 +14,7 @@ var ChatRoomClient = function() {
   this.users = [];
   this.totalCount = 0;
   // this.socket = io.connect('http://123.56.230.53:29231/');
-  this.socket = io.connect('http://localhost:29231');
+  this.socket = io.connect();
   this.startup();
   this.init();
 };
@@ -541,11 +541,10 @@ window.chatRoomClient = new ChatRoomClient();
     left: 6px;
     right: 6px;
     top: 6px;
-    width: 100%;
+    width: 77%;
     bottom: 6px;
     outline: none;
     line-height: 18px;
-    padding-right: 100px;
     font-size: 12px;
     overflow-y: auto;
   }
