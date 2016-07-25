@@ -307,8 +307,9 @@ ChatRoomClient.prototype.addChatLog = function(data, id, isSelf) {
     return htmlspecialchars(data && data[$1] || '');
   });
   var $target = $(".chatroom-item[data-id='" + id + "']");
+  $target.append($log);
   if(isSelf) {
-    $target.append($log).scrollTop(1E5);
+    $target.scrollTop(1E5);
   }
 };
 
