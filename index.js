@@ -42,7 +42,10 @@ ChatRoom.prototype.bindEvent = function() {
   io.on('connection', function (socket) {
     var id = socket.id;
     // 用户与服务器第一次握手，服务器传递信息给客户端
-    socket.emit('connected', { id: id });
+    socket.emit('connected', {
+      id: id,
+      size: Object.keys(self.onlineUser).length
+    });
     // 用户与服务器第二次握手，客户端传递信息给服务器
     socket.on('createUser', function (data) {
       // 用户 userId 作为 session 信息保存在用户客户端

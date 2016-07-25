@@ -58,6 +58,9 @@ ChatRoomClient.prototype.connection = function(cb) {
   var self = this;
 
   self.socket.on('connected', function(data) {
+    if(data.size) {
+      $('.chatroom-tribe[data-id="group"] .name strong').text(data.size + 1);
+    }
     self.userId = data.id;
     self.userName = self.userId.slice(2);
     self.userAvatar = 'http://avatar.duoshuo.com/avatar-50/292/117200.jpg';
