@@ -12,6 +12,7 @@ function htmlspecialchars(str){
 }
 var ChatRoomClient = function() {
   this.users = [];
+  this.totalCount = 0;
   // this.socket = io.connect('http://123.56.230.53:29231/');
   this.socket = io.connect('http://localhost:29231');
   this.startup();
@@ -46,7 +47,7 @@ ChatRoomClient.prototype.startup = function() {
           '<div class="chatroom-item current" data-id="group">',
           '</div>',
         '</div>',
-        '<div class="chatroom-pannel-ft"><textarea type="text" class="chatroom-input" placeholder="按 Ctrl+Enter 发送"></textarea></div>',
+        '<div class="chatroom-pannel-ft"><textarea type="text" class="chatroom-input" placeholder="按 Ctrl+Enter 发送"></textarea><span class="chatroom-send-btn">发送</span></div>',
       '</div>',
     '</div>'
   ].join('\n');
@@ -138,6 +139,11 @@ ChatRoomClient.prototype.socketEvent = function() {
     if(data.type == 'OFFLINE') {
       return self.addInfoLog(data, data.id);
     }
+    if($('.chatroom-fold').size()) {
+        var str = "<img class='alert-avatar' src='" +
+            htmlspecialchars(data.avatar) + "'>" + htmlspecialchars(data.name) + "の私信，右下角查看";
+        window.operation && operation.alertMsg(str);
+    }
     self.createPrivateChat(data);
     self.addChatLog(data, data.id);
     self.updateCount(data.id);
@@ -164,7 +170,7 @@ ChatRoomClient.prototype.bindEvent = function() {
   });
   $('.chatroom-input').on('keydown', function(evt) {
     var $this = $(this);
-    if((evt.ctrlKey || evt.metaKey) && evt.keyCode == '13' && $.trim($this.val())) {
+    if((evt.ctrlKey || evt.metaKey) && evt.keyCode == '13' && $.trim($this.val()) || evt.isTrigger) {
       var targetId = $('.chatroom-tribe.current').attr('data-id');
       var data = {
         id: self.userId,
@@ -179,13 +185,17 @@ ChatRoomClient.prototype.bindEvent = function() {
       return false;
     }
   });
+  $('.chatroom-send-btn').on('click', function(evt) {
+    $('.chatroom-input').trigger('keydown');
+  });
   $('.chatroom-tribes').on('click', 'li', function(evt) {
     evt.preventDefault();
     var id = $(this).attr('data-id');
+    var $target = $('.chatroom-item[data-id="' + id + '"]');
     $('.chatroom-tribes').find('li').removeClass('current');
     $('.chatroom-item').removeClass('current');
     $(this).addClass('current');
-    $('.chatroom-item[data-id="' + id + '"]').addClass('current');
+    $target.addClass('current').scrollTop(1E5);
     $(this).find('.count').text(0).css('visibility', 'hidden');
     var count = parseInt($(this).find('.count').text());
     count = isNaN(count) ? 0 : +count;
@@ -193,6 +203,7 @@ ChatRoomClient.prototype.bindEvent = function() {
     setTimeout(function() {
       $('.chatroom textarea').focus();
     }, 10);
+    $('.chatroom-pannel-bd').scrollTop($target.attr('data-lastscroll'));
   });
   $('.chatroom-tribes').on('click', 'i', function(evt) {
     evt.preventDefault();
@@ -312,15 +323,25 @@ ChatRoomClient.prototype.addChatLog = function(data, id, isSelf) {
   });
   var $target = $(".chatroom-item[data-id='" + id + "']");
   $target.append($log);
-  if(isSelf) {
-    $target.scrollTop(1E5);
-  }
+  this.scroll(id, isSelf);
 };
+
+ChatRoomClient.prototype.scroll = function(id, isSelf) {
+  var $target = $(".chatroom-item[data-id='" + id + "']");
+  var $box = $('.chatroom-pannel-bd');
+  var H = $target.height();
+  var DELTA = 600;
+  if(isSelf || $box.scrollTop() < H - DELTA) {
+    $box.scrollTop(H);
+    $target.attr('data-lastscroll', H);
+  }
+}
 
 ChatRoomClient.prototype.addInfoLog = function(data, id) {
   var $info = '<div class="chatroom-log-info">' + htmlspecialchars(data.msg) + '</div>';
   var $target = $(".chatroom-item[data-id='" + htmlspecialchars(id) + "']");
   // $target.append($info).scrollTop(1E5);
+  this.scroll(id);
 };
 
 ChatRoomClient.prototype.addWelcomeLog = function(data) {
@@ -329,6 +350,7 @@ ChatRoomClient.prototype.addWelcomeLog = function(data) {
         + '"><strong class="name">' + htmlspecialchars(data.name) + '</strong> 加入群聊！</div>';
   var $target = $(".chatroom-item[data-id='group']");
   // $target.append($info).scrollTop(1E5);
+  this.scroll(data.id);
 };
 
 ChatRoomClient.prototype.updateCount = function(id) {
@@ -370,6 +392,7 @@ window.chatRoomClient = new ChatRoomClient();
     height: 30px;
     line-height: 30px;
     text-align: center;
+    z-index: 0;
   }
   .chatroom {
     font-size: 12px;
@@ -501,8 +524,6 @@ window.chatRoomClient = new ChatRoomClient();
   }
   .chatroom-item {
     display: none;
-    height: 330px;
-    overflow-y: auto;
     padding-bottom: 10px;
   }
   .chatroom-item.current {
@@ -524,7 +545,9 @@ window.chatRoomClient = new ChatRoomClient();
     bottom: 6px;
     outline: none;
     line-height: 18px;
+    padding-right: 100px;
     font-size: 12px;
+    overflow-y: auto;
   }
   .chatroom-log {
     padding: 25px 10px 0;
@@ -695,6 +718,25 @@ window.chatRoomClient = new ChatRoomClient();
     font-weight: normal;
     cursor:pointer;
     text-decoration: underline;
+  }
+  .chatroom-send-btn {
+    position: relative;
+    z-index: 0;
+    float: right;
+    width: 70px;
+    height: 40px;
+    background: #EEE;
+    text-align: center;
+    line-height: 40px;
+    top: 10px;
+    font-size: 14px;
+    margin-right: 10px;
+    cursor: pointer;
+    transition: all 0.3s;
+  }
+  .chatroom-send-btn:hover {
+    background: #CCC;
+    transition: all 0.3s;
   }
 </style>
 <!--
