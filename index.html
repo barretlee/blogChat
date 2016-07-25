@@ -329,7 +329,7 @@ ChatRoomClient.prototype.addWelcomeLog = function(data) {
 
 ChatRoomClient.prototype.updateCount = function(id) {
   var $li = $('.chatroom-tribe[data-id="' + id + '"]');
-  if(!$li.size() || $li.hasClass('current')) return;
+  // if(!$li.size() || $li.hasClass('current')) return;
   var $target = $li.find('.count');
   var count = parseInt($target.text());
   if(++count > 99) {
