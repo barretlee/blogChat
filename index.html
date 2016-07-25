@@ -336,7 +336,7 @@ ChatRoomClient.prototype.updateCount = function(id) {
   // if(!$li.size() || $li.hasClass('current')) return;
   var $target = $li.find('.count');
   var count = parseInt($target.text());
-  count = isNaN(count) : 0 ? +count;
+  count = isNaN(count) ? 0 : +count;
   if(++count > 99) {
     count = 99;
   }
