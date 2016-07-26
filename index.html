@@ -13,6 +13,7 @@ function htmlspecialchars(str){
 }
 var ChatRoomClient = function() {
   this.users = [];
+  this.nameChanged = false;
   this.totalCount = 0;
   // this.socket = io.connect('http://123.56.230.53:29231/');
   this.socket = io.connect();
@@ -95,7 +96,10 @@ ChatRoomClient.prototype.connection = function(cb) {
     if(window.sessionStorage) {
       window.sessionStorage.setItem('userId', self.userId);
     }
-    self.changeName();
+    if(!self.nameChanged) {
+      self.nameChanged = true;
+      self.changeName();
+    }
     // console.info('ID: ' + self.userId);
     self.socket.emit('createUser', {
       userId: self.userId,
@@ -195,9 +199,13 @@ ChatRoomClient.prototype.bindEvent = function() {
     var $this = $(this);
     if((evt.ctrlKey || evt.metaKey) && evt.keyCode == '13' && $.trim($this.val()) || evt.isTrigger) {
       var targetId = $('.chatroom-tribe.current').attr('data-id');
+      var val = $this.val();
+      if(val.length >= 516) {
+        val = val.slice(0, 500) + '...(输入太长，系统自动截断)';
+      }
       var data = {
         id: self.userId,
-        msg: $this.val(),
+        msg: val,
         name: self.userName,
         avatar: self.userAvatar,
         targetId: targetId
