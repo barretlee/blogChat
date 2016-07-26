@@ -140,6 +140,9 @@ ChatRoom.prototype.bindEvent = function() {
         socket.speakTotalTimes = socket.speakTotalTimes || 0;
         socket.speakTotalTimes++;
       }
+      if(data.msg.length >= 516) {
+        data.msg = data.msg.slice(0, 500) + '...(输入太长，系统自动截断)';
+      }
       data.msg && io.emit('broadcast', {
         msg: data.msg,
         id: data.id,
@@ -165,6 +168,9 @@ ChatRoom.prototype.bindEvent = function() {
       var toUserId = data.targetId;
       var toSocket = self.onlineUser[toUserId];
       if(toSocket) {
+        if(data.msg.length >= 516) {
+          data.msg = data.msg.slice(0, 500) + '...(输入太长，系统自动截断)';
+        }
         data.msg && toSocket.emit('pm', {
           msg: data.msg,
           id: data.id,
