@@ -108,7 +108,7 @@ ChatRoom.prototype.bindEvent = function() {
         socket.speakTotalTimes = socket.speakTotalTimes || 0;
         socket.speakTotalTimes++;
       }
-      io.emit('broadcast', {
+      data.msg && io.emit('broadcast', {
         msg: data.msg,
         id: data.id,
         name: data.name,
@@ -128,7 +128,7 @@ ChatRoom.prototype.bindEvent = function() {
       var toUserId = data.targetId;
       var toSocket = self.onlineUser[toUserId];
       if(toSocket) {
-        toSocket.emit('pm', {
+        data.msg && toSocket.emit('pm', {
           msg: data.msg,
           id: data.id,
           name: data.name,
