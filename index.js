@@ -109,8 +109,9 @@ ChatRoom.prototype.bindEvent = function() {
       var socket = self.onlineUser[data.id];
       if(socket) {
         var nowTime = Math.floor(new Date().getTime() / 1000);
-        if(socket.speakTotalTimes > 200) {
+        if(socket.speakTotalTimes > 100) {
           socket.speakTotalTimes++;
+          socket.lastSpeakTime = nowTime;
           return socket.emit('pm', {
             msg: '发送失败，你咋这多话要说？等会儿再来吧。',
             id: 'system',
@@ -119,8 +120,7 @@ ChatRoom.prototype.bindEvent = function() {
             type: "ATTENSION"
           });
         }
-        if(socket.speakTotalTimes > 2000) {
-          socket.speakTotalTimes++;
+        if(socket.speakTotalTimes > 500) {
           delete self.onlineUser[data.id];
           return socket.emit('pm', {
             msg: '请正常聊天！',
@@ -128,6 +128,8 @@ ChatRoom.prototype.bindEvent = function() {
           });
         }
         if(socket.lastSpeakTime && nowTime - socket.lastSpeakTime < 3) {
+          socket.speakTotalTimes++;
+          socket.lastSpeakTime = nowTime;
           return socket.emit('pm', {
             msg: '发送失败，请注意语速！',
             id: 'system',
@@ -136,10 +138,10 @@ ChatRoom.prototype.bindEvent = function() {
             type: "ATTENSION"
           });
         }
-        socket.lastSpeakTime = Math.floor(new Date().getTime() / 1000);
+        socket.speakTotalTimes++;
+        socket.lastSpeakTime = nowTime;
         socket.lastSpeakContent = data.msg;
         socket.speakTotalTimes = socket.speakTotalTimes || 0;
-        socket.speakTotalTimes++;
       }
       if(data.msg.length >= 516) {
         data.msg = data.msg.slice(0, 500) + '...(输入太长，系统自动截断)';
