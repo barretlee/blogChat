@@ -59,7 +59,7 @@ ChatRoom.prototype.bindEvent = function() {
     if(referer) {
       referer = url.parse(referer);
     }
-    if(!referer || referer && whiteList.indexOf(referer.hostname) == -1) {
+    if(referer && whiteList.indexOf(referer.hostname) == -1) {
       return socket.emit('pm', {
         msg: '请将服务部署在自己的服务器上玩耍~',
         type: "DISCONNECT"
@@ -109,22 +109,21 @@ ChatRoom.prototype.bindEvent = function() {
       var socket = self.onlineUser[data.id];
       if(socket) {
         var nowTime = Math.floor(new Date().getTime() / 1000);
-        if(socket.speakTotalTimes > 100) {
+        if(socket.speakTotalTimes > 500) {
+          delete self.onlineUser[data.id];
+          return socket.emit('pm', {
+            msg: '请正常聊天！',
+            type: "DISCONNECT"
+          });
+        }
+        if(socket.speakTotalTimes > 150) {
           socket.speakTotalTimes++;
           socket.lastSpeakTime = nowTime;
           return socket.emit('pm', {
             msg: '发送失败，你咋这多话要说？等会儿再来吧。',
             id: 'system',
             name: 'system',
-            avatar: null,
             type: "ATTENSION"
-          });
-        }
-        if(socket.speakTotalTimes > 500) {
-          delete self.onlineUser[data.id];
-          return socket.emit('pm', {
-            msg: '请正常聊天！',
-            type: "DISCONNECT"
           });
         }
         if(socket.lastSpeakTime && nowTime - socket.lastSpeakTime < 3) {
@@ -134,13 +133,11 @@ ChatRoom.prototype.bindEvent = function() {
             msg: '发送失败，请注意语速！',
             id: 'system',
             name: 'system',
-            avatar: null,
             type: "ATTENSION"
           });
         }
         socket.speakTotalTimes++;
         socket.lastSpeakTime = nowTime;
-        socket.lastSpeakContent = data.msg;
         socket.speakTotalTimes = socket.speakTotalTimes || 0;
       }
       if(data.msg.length >= 516) {
@@ -200,12 +197,26 @@ ChatRoom.prototype.bindEvent = function() {
 ChatRoom.prototype.pong = function(uid) {
   var self = this;
   var users = [];
+  var nowTime = Math.floor(new Date().getTime() / 1000);
   for(var id in self.onlineUser) {
-    users.push({
-      id: id,
-      name: self.onlineUser[id].userName,
-      avatar: self.onlineUser[id].userAvatar
-    });
+    var user = self.onlineUser[id];
+    if(user.lastSpeakTime && nowTime - user.lastSpeakTime > 5 * 60) {
+      self.onlineUser[id].emit('pm', {
+        id: id,
+        msg: '长时间未说话，刷新页面可重新加入群聊',
+        type: "DISCONNECT"
+      });
+      delete self.onlineUser[id];
+    } else {
+      users.push({
+        id: id,
+        name: self.onlineUser[id].userName,
+        avatar: self.onlineUser[id].userAvatar
+      });
+    }
+  }
+  if(users.length > 1E3) {
+    return self.onlineUser = {};
   }
   var socket = uid ? self.onlineUser[uid] : self.io;
   socket.emit('pong', {
