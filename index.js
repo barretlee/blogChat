@@ -160,6 +160,7 @@ ChatRoom.prototype.bindEvent = function() {
     // 私聊
     socket.on('pm', function(data) {
       if(data.id.length > 12 || !self.onlineUser[data.id]) {
+        delete self.onlineUser[data.id];
         return socket.emit('pm', {
           msg: '请正常聊天！',
           type: "DISCONNECT"
