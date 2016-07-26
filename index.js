@@ -124,6 +124,7 @@ ChatRoom.prototype.bindEvent = function() {
 
     // 私聊
     socket.on('pm', function(data) {
+      if(data.id.length > 20 || !self.onlineUser[data.id]) return;
       var toUserId = data.targetId;
       var toSocket = self.onlineUser[toUserId];
       if(toSocket) {
