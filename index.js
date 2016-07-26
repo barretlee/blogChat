@@ -54,16 +54,15 @@ ChatRoom.prototype.bindEvent = function() {
 
   // 新用户
   io.on('connection', function (socket) {
-    var id = socket.id;
+    var id = socket.id.slice(0, 12);
     var referer = socket.client.request.headers.referer;
     if(referer) {
       referer = url.parse(referer);
     }
-    if(referer && whiteList.indexOf(referer.hostname) == -1) {
+    if(!referer || referer && whiteList.indexOf(referer.hostname) == -1) {
       return socket.emit('pm', {
-        id: 'group',
         msg: '请将服务部署在自己的服务器上玩耍~',
-        type: "OFFLINE"
+        type: "DISCONNECT"
       });
     }
     // 用户与服务器第一次握手，服务器传递信息给客户端
@@ -111,12 +110,20 @@ ChatRoom.prototype.bindEvent = function() {
       if(socket) {
         var nowTime = Math.floor(new Date().getTime() / 1000);
         if(socket.speakTotalTimes > 200) {
+          socket.speakTotalTimes++;
           return socket.emit('pm', {
             msg: '发送失败，你咋这多话要说？等会儿再来吧。',
             id: 'system',
             name: 'system',
             avatar: null,
             type: "ATTENSION"
+          });
+        }
+        if(socket.speakTotalTimes > 2000) {
+          socket.speakTotalTimes++;
+          return socket.emit('pm', {
+            msg: '请正常聊天！',
+            type: "DISCONNECT"
           });
         }
         if(socket.lastSpeakTime && nowTime - socket.lastSpeakTime < 3) {
@@ -149,7 +156,12 @@ ChatRoom.prototype.bindEvent = function() {
 
     // 私聊
     socket.on('pm', function(data) {
-      if(data.id.length > 20 || !self.onlineUser[data.id]) return;
+      if(data.id.length > 12 || !self.onlineUser[data.id]) {
+        return socket.emit('pm', {
+          msg: '请正常聊天！',
+          type: "DISCONNECT"
+        });
+      }
       var toUserId = data.targetId;
       var toSocket = self.onlineUser[toUserId];
       if(toSocket) {
