@@ -26,6 +26,7 @@ node index;
 
 ### Changelog
 
+- limit msg length
 - whitelist of hostname
 - detect robot at server
 - detect robot at client
