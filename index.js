@@ -1,10 +1,24 @@
 var fs = require('fs');
 var path = require('path');
+var url = require('url');
 
 var PORT = 29231;
 var PONG_DELTA = 10E3;
 var NOT_FOUNT_MSG = '小胡子哥提醒您：404 了！';
 var FAVICON = fs.readFileSync(path.join(__dirname, 'favicon.ico'));
+var whiteList = [
+  '0.0.0.0',
+  '127.0.0.1',
+  'barret',
+  'localhost',
+  '123.56.230.53',
+  'barretlee.com',
+  'www.barretlee.com',
+  'barret.cc',
+  'www.barret.cc',
+  'xiaohuzige.com',
+  'www.xiaohuzige.com'
+];
 
 var ChatRoom = function() {
   this.init();
@@ -41,6 +55,17 @@ ChatRoom.prototype.bindEvent = function() {
   // 新用户
   io.on('connection', function (socket) {
     var id = socket.id;
+    var referer = socket.client.request.headers.referer;
+    if(referer) {
+      referer = url.parse(referer);
+    }
+    if(referer && whiteList.indexOf(referer.hostname) == -1) {
+      return socket.emit('pm', {
+        id: 'group',
+        msg: '请将服务部署在自己的服务器上玩耍~',
+        type: "OFFLINE"
+      });
+    }
     // 用户与服务器第一次握手，服务器传递信息给客户端
     socket.emit('connected', {
       id: id,

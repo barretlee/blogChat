@@ -26,6 +26,7 @@ node index;
 
 ### Changelog
 
+- whitelist of hostname
 - detect robot at server
 - detect robot at client
 - support custom username
