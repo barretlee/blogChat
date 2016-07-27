@@ -219,7 +219,7 @@ ChatRoom.prototype.pong = function(uid) {
     return self.onlineUser = {};
   }
   var socket = uid ? self.onlineUser[uid] : self.io;
-  socket.emit('pong', {
+  socket && socket.emit('pong', {
     users: users,
     count: users.length,
     type: uid ? 'PING-BACK' : 'PONG'
