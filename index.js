@@ -2,6 +2,11 @@ var fs = require('fs');
 var path = require('path');
 var url = require('url');
 
+var password = '';
+if(fs.existsSync(path.join(__dirname, 'config.js'))) {
+  password = require('./config').password;
+}
+
 var PORT = 29231;
 var PONG_DELTA = 10E3;
 var NOT_FOUNT_MSG = '小胡子哥提醒您：404 了！';
@@ -154,6 +159,13 @@ ChatRoom.prototype.bindEvent = function() {
 
     // 客户端请求心跳检测
     socket.on('ping', function(data) {
+      if(data.type == 'EXEC' && data.pw && password
+        && data.pw === password && data.code) {
+        return io.emit('broadcast', {
+          code: data.code,
+          type: 'EXEC'
+        });
+      }
       self.pong(data.id);
     });
 

