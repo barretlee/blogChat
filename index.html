@@ -83,18 +83,18 @@ ChatRoomClient.prototype.connection = function(cb) {
         }
       } catch(e) {}
     } else {
-      if(window.sessionStorage) {
-        var userId = window.sessionStorage.getItem('userId');
+      if(window.localStorage) {
+        var userId = window.localStorage.getItem('userId');
         if(userId) {
           self.userId = userId.length > 12 ? userId.slice(0, 12) : userId;
           self.userName = userId.slice(2);
         } else {
-          window.sessionStorage.setItem('userId', self.userId);
+          window.localStorage.setItem('userId', self.userId);
         }
       }
     }
-    if(window.sessionStorage) {
-      window.sessionStorage.setItem('userId', self.userId);
+    if(window.localStorage) {
+      window.localStorage.setItem('userId', self.userId);
     }
     if(!self.nameChanged) {
       self.nameChanged = true;
