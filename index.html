@@ -91,6 +91,10 @@ ChatRoomClient.prototype.connection = function(cb) {
         } else {
           window.localStorage.setItem('userId', self.userId);
         }
+        var userName = window.localStorage.getItem('userName');
+        if(userName) {
+          self.userName = userName;
+        }
       }
     }
     if(window.localStorage) {
@@ -98,7 +102,7 @@ ChatRoomClient.prototype.connection = function(cb) {
     }
     if(!self.nameChanged) {
       self.nameChanged = true;
-      self.changeName();
+      return self.changeName();
     }
     // console.info('ID: ' + self.userId);
     self.socket.emit('createUser', {
@@ -135,6 +139,9 @@ ChatRoomClient.prototype.changeName = function() {
         userName: self.userName,
         userAvatar: self.userAvatar
       });
+      if(window.localStorage) {
+        window.localStorage.setItem('userName', self.userName);
+      }
       $('.chatroom-rename').remove();
     }
   });
@@ -160,11 +167,14 @@ ChatRoomClient.prototype.socketEvent = function() {
   });
   self.socket.on('pm', function(data) {
     if(data.type == 'DISCONNECT') {
-      chatRoomClient.socket.disconnect();
+      self.socket.emit('forceDisconnect', {
+        id: self.userId
+      });
+      self.socket.disconnect();
       return self.addInfoLog(data, 'group');
     }
     if(data.type == 'OFFLINE') {
-      return self.addInfoLog(data, data.id);
+      return self.addInfoLog(data);
     }
     if(data.type == 'ATTENSION') {
       return self.addInfoLog(data, 'group');
@@ -216,12 +226,14 @@ ChatRoomClient.prototype.bindEvent = function() {
       if(!self.checkRobot()) return;
       self.socket.emit(targetId == 'group' ? 'gm' : 'pm', data);
       self.addChatLog(data, targetId, true);
-      $this.val('');
+      $this.val('').focus();
       return false;
     }
   });
   $('.chatroom-send-btn').on('click', function(evt) {
-    $('.chatroom-input').trigger('keydown');
+    if($.trim($('.chatroom-input').val())) {
+      $('.chatroom-input').trigger('keydown');
+    }
   });
   $('.chatroom-tribes').on('click', 'li', function(evt) {
     evt.preventDefault();
@@ -298,13 +310,15 @@ ChatRoomClient.prototype.bindEvent = function() {
     $(".chatroom textarea").attr('placeholder', '按 Command+Enter 发送');
   }
   $(window).on('beforeunload close', function() {
-    self.socket.emit('disconnet', {
+    self.socket.emit('forceDisconnect', {
       id: self.userId
     });
+    self.socket.disconnect();
   });
 };
 
 ChatRoomClient.prototype.ping = function(data) {
+  if(this.checkOnline('group')) return;
   data = data || {};
   data.id = this.userId;
   this.socket.emit('ping', data);
@@ -343,7 +357,18 @@ ChatRoomClient.prototype.createPrivateChat = function(data, setCurrent) {
   }
 };
 
+ChatRoomClient.prototype.checkOnline = function(id) {
+  if(this.socket && this.socket.disconnected) {
+    this.addInfoLog({
+      msg: '您已离线，请刷新页面重新登录'
+    }, id);
+    return false;
+  }
+  return true;
+};
+
 ChatRoomClient.prototype.addChatLog = function(data, id, isSelf) {
+  if(!this.checkOnline(id)) return;
   if(isSelf) {
     data.name = '我';
   }
@@ -379,8 +404,10 @@ ChatRoomClient.prototype.scroll = function(id, isSelf) {
 ChatRoomClient.prototype.addInfoLog = function(data, id) {
   var $info = '<div class="chatroom-log-info">' + htmlspecialchars(data.msg) + '</div>';
   var $target = $(".chatroom-item[data-id='" + htmlspecialchars(id) + "']");
+  if(!id) {
+    $target = $(".chatroom-item.current");
+  }
   $target.append($info);
-  // .scrollTop(1E5);
   this.scroll(id);
 };
 
@@ -390,26 +417,28 @@ ChatRoomClient.prototype.addWelcomeLog = function(data) {
         + '"><strong class="name">' + htmlspecialchars(data.name) + '</strong> 加入群聊！</div>';
   var $target = $(".chatroom-item[data-id='group']");
   $target.append($info);
-  // .scrollTop(1E5);
   this.scroll(data.id);
 };
 
 ChatRoomClient.prototype.updateCount = function(id) {
   var $li = $('.chatroom-tribe[data-id="' + htmlspecialchars(id) + '"]');
-  // if(!$li.size() || $li.hasClass('current')) return;
   var $target = $li.find('.count');
   var count = parseInt($target.text());
   count = isNaN(count) ? 0 : +count;
   if(++count > 99) {
-    count = 99;
+    count = "+99";
   }
   $target.text(count).css('visibility', 'visible');
   this.totalCount++;
   if(this.totalCount > 99) {
-    this.totalCount = 99;
+    this.totalCount = "+99";
   }
   if($('.chatroom').hasClass('chatroom-fold')) {
     $('.chatroom .count').eq(0).text(this.totalCount).css('visibility', 'visible');
+  } else {
+    if($('.chatroom-tribe.current').attr('data-id') === 'group') {
+      $('.chatroom .count').eq(0).text(0).css('visibility', 'hidden');
+    }
   }
 };
 

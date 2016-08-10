@@ -98,13 +98,20 @@ ChatRoom.prototype.bindEvent = function() {
     });
 
     // 断开连接
-    socket.on('disconnet', function(data) {
-      var userId = data.id;
-      if(self.onlineUser[userId]) {
-        // io.emit('broadcast', {
-        //   msg: '用户 ' + userId + ' 离开群聊',
-        //   type: "LEAVE"
-        // });
+    socket.on('forceDisconnect', function(data) {
+      var userId = socket.userId;
+      var pw = data.pw;
+      if(pw && password && pw === password) {
+        userId = data.id;
+      }
+      console.log(userId);
+      if(userId && self.onlineUser[userId]) {
+        io.emit('broadcast', {
+          name: "SYSTEM",
+          msg: '用户 ' + self.onlineUser[userId].userName + ' 离开群聊',
+          type: "LEAVE"
+        });
+        self.onlineUser[userId].disconnect();
         delete self.onlineUser[userId];
       }
     });
@@ -115,6 +122,7 @@ ChatRoom.prototype.bindEvent = function() {
       if(socket) {
         var nowTime = Math.floor(new Date().getTime() / 1000);
         if(socket.speakTotalTimes > 500) {
+          self.onlineUser[userId].disconnect();
           delete self.onlineUser[data.id];
           return socket.emit('pm', {
             msg: '请正常聊天！',
@@ -172,6 +180,7 @@ ChatRoom.prototype.bindEvent = function() {
     // 私聊
     socket.on('pm', function(data) {
       if(data.id.length > 12 || !self.onlineUser[data.id]) {
+        self.onlineUser[userId].disconnect();
         delete self.onlineUser[data.id];
         return socket.emit('pm', {
           msg: '请正常聊天！',
@@ -218,6 +227,7 @@ ChatRoom.prototype.pong = function(uid) {
         msg: '长时间未说话，刷新页面可重新加入群聊',
         type: "DISCONNECT"
       });
+      self.onlineUser[userId].disconnect();
       delete self.onlineUser[id];
     } else {
       users.push({
