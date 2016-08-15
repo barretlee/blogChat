@@ -318,7 +318,7 @@ ChatRoomClient.prototype.bindEvent = function() {
 };
 
 ChatRoomClient.prototype.ping = function(data) {
-  if(this.checkOnline('group')) return;
+  if(!this.checkOnline('group')) return;
   data = data || {};
   data.id = this.userId;
   this.socket.emit('ping', data);
