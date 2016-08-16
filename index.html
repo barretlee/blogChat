@@ -182,7 +182,15 @@ ChatRoomClient.prototype.socketEvent = function() {
     if($('.chatroom-fold').size()) {
         var str = "<img class='alert-avatar' src='" +
             htmlspecialchars(data.avatar) + "'>" + htmlspecialchars(data.name) + "の私信，右下角查看";
-        window.operation && operation.alertMsg(str);
+        if ('Notification' in window) {
+          window.operation && operation.alertMsg({
+            body: htmlspecialchars(data.name) + "の私信，右下角查看",
+            icon: htmlspecialchars(data.avatar),
+            title: '群聊消息'
+          });
+        } else {
+          window.operation && operation.alertMsg(str);
+        }
     }
     self.createPrivateChat(data);
     self.addChatLog(data, data.id);
