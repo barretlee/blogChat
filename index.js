@@ -104,14 +104,14 @@ ChatRoom.prototype.bindEvent = function() {
       if(pw && password && pw === password) {
         userId = data.id;
       }
-      console.log(userId);
-      if(userId && self.onlineUser[userId]) {
+      var user = userId && self.onlineUser[userId];
+      if(userId && user && user.userName) {
         io.emit('broadcast', {
           name: "SYSTEM",
-          msg: '用户 ' + self.onlineUser[userId].userName + ' 离开群聊',
+          msg: '用户 ' + user.userName + ' 离开群聊',
           type: "LEAVE"
         });
-        self.onlineUser[userId].disconnect();
+        user.disconnect();
         delete self.onlineUser[userId];
       }
     });
