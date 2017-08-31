@@ -16,13 +16,15 @@ var whiteList = [
   '127.0.0.1',
   'barret',
   'localhost',
-  '123.56.230.53',
+  '119.23.13.9',
   'barretlee.com',
   'www.barretlee.com',
   'barret.cc',
   'www.barret.cc',
   'xiaohuzige.com',
-  'www.xiaohuzige.com'
+  'www.xiaohuzige.com',
+  'www.cnblogs.com',
+  'hustksyking.cnblogs.com'
 ];
 
 var ChatRoom = function() {
