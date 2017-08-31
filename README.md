@@ -3,7 +3,7 @@ A Simple Chat System
 
 It's a simple chat system, can be inserted to anywhere.
 
-Demo: http://123.56.230.53:29231/
+Demo: http://119.23.13.9:29231/
 
 ### Usage
 
