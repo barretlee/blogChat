@@ -229,7 +229,7 @@ ChatRoom.prototype.pong = function(uid) {
         msg: '长时间未说话，刷新页面可重新加入群聊',
         type: "DISCONNECT"
       });
-      self.onlineUser[userId].disconnect();
+      self.onlineUser[id].disconnect();
       delete self.onlineUser[id];
     } else {
       users.push({
