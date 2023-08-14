@@ -7,7 +7,7 @@ if(fs.existsSync(path.join(__dirname, 'config.js'))) {
   password = require('./config').password;
 }
 
-var PORT = 29231;
+var PORT = process.env.PORT || 29231;
 var PONG_DELTA = 10E3;
 var NOT_FOUNT_MSG = '小胡子哥提醒您：404 了！';
 var FAVICON = fs.readFileSync(path.join(__dirname, 'favicon.ico'));
