@@ -24,7 +24,8 @@ var whiteList = [
   'xiaohuzige.com',
   'www.xiaohuzige.com',
   'www.cnblogs.com',
-  'hustksyking.cnblogs.com'
+  'hustksyking.cnblogs.com',
+  'blogchat.zeabur.app'
 ];
 
 var ChatRoom = function() {
