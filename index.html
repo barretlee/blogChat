@@ -345,7 +345,7 @@ ChatRoomClient.prototype.createPrivateChat = function(data, setCurrent) {
   ];
   var $li = tabXtpl.join('').replace(/<%\s*?(\w+)\s*?%>/gm, function($0, $1) {
     if($1 === 'avatar' && (!data || !data[$1])) {
-      return '//avatar.duoshuo.com/avatar-50/292/117200.jpg';
+      return 'https://pica.zhimg.com/v2-abed1a8c04700ba7d72b45195223e0ff_l.jpg';
     }
     return htmlspecialchars(data && data[$1] || '');
   });
@@ -390,7 +390,7 @@ ChatRoomClient.prototype.addChatLog = function(data, id, isSelf) {
   ];
   var $log = logXtpl.join('\n').replace(/<%\s*?(\w+)\s*?%>/gm, function($0, $1) {
     if($1 === 'avatar' && (!data || !data[$1])) {
-      return '//avatar.duoshuo.com/avatar-50/292/117200.jpg';
+      return 'https://pica.zhimg.com/v2-abed1a8c04700ba7d72b45195223e0ff_l.jpg';
     }
     return htmlspecialchars(data && data[$1] || '');
   });
