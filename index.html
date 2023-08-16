@@ -65,7 +65,7 @@ ChatRoomClient.prototype.connection = function(cb) {
     }
     self.userId = data.id;
     self.userName = self.userId.slice(2);
-    self.userAvatar = '//avatar.duoshuo.com/avatar-50/292/117200.jpg';
+    self.userAvatar = 'https://pica.zhimg.com/v2-abed1a8c04700ba7d72b45195223e0ff_l.jpg';
     if(window.DUOSHUO && window.DUOSHUO.visitor
        && window.DUOSHUO.visitor.data.user_id) {
       var userInfo = window.DUOSHUO.visitor.data;
